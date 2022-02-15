@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/guacamole/db" VERSION="20101203" COMMENT="XMLDB file for Moodle mod/guacamole"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="guacamole" COMMENT="Default comment for guacamole, please edit me">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true"/>
+        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" COMMENT="Course guacamole activity belongs to"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="name field for moodle instances"/>
+        <FIELD NAME="imageid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" COMMENT="From mdl_guacamole_images"/>
+        <FIELD NAME="minutestoshutdown" TYPE="int" LENGTH="3" NOTNULL="false" SEQUENCE="false" COMMENT="Number of minutes to shutdown"/>
+        <FIELD NAME="daystodelete" TYPE="int" LENGTH="3" NOTNULL="false" SEQUENCE="false" COMMENT="Days to delete computer"/>
+        <FIELD NAME="intro" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="General introduction of the guacamole activity"/>
+        <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" COMMENT="Format of the intro field (MOODLE, HTML, MARKDOWN...)"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="100" SEQUENCE="false" COMMENT="The maximum grade. Can be negative to indicate the use of a scale."/>
+        <FIELD NAME="timeopen" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="guacamole_images" COMMENT="Computers that can be used">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="name field for instance"/>
+        <FIELD NAME="guaidconnection" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="guaidconnection"/>
+        <FIELD NAME="cloudimage" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="name disk image cloud"/>
+        <FIELD NAME="defaultminutestoshutdown" TYPE="int" LENGTH="3" NOTNULL="true" SEQUENCE="false" COMMENT=""/>
+        <FIELD NAME="defaultdaystodelete" TYPE="int" LENGTH="3" NOTNULL="true" SEQUENCE="false" COMMENT=""/>
+        <FIELD NAME="maxnuminstances" TYPE="int" LENGTH="3" NOTNULL="true" SEQUENCE="false" COMMENT="Max number of instances"/>
+        <FIELD NAME="active" TYPE="int" LENGTH="1" NOTNULL="false" SEQUENCE="false" COMMENT=""/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+
+    <TABLE NAME="guacamole_computers" COMMENT="Computers used">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true"/>
+        <FIELD NAME="imageid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" COMMENT="From mdl_guacamole_images"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="cloudimage" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="name of instance on the cloud"/>
+        <FIELD NAME="guaidconnection" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="guaidconnection"/>
+        <FIELD NAME="state" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timelaststart" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timelaststop" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="minutestoshutdown" TYPE="int" LENGTH="3" NOTNULL="true" SEQUENCE="false" COMMENT=""/>
+        <FIELD NAME="daystodelete" TYPE="int" LENGTH="3" NOTNULL="true" SEQUENCE="false" COMMENT=""/>
+        <FIELD NAME="timetodelete" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT=""/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="imageuser" TYPE="unique" FIELDS="imageid, userid" COMMENT="Unique key"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="timetodelete" UNIQUE="false" FIELDS="timetodelete"/>
+      </INDEXES>
+    </TABLE>
+
+
+
+
+
+  </TABLES>
+</XMLDB>

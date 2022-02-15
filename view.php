@@ -1,0 +1,222 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Prints a particular instance of guacamole
+ *
+ * You can have a rather longer description of the file as well,
+ * if you like, and it can span multiple lines.
+ *
+ * @package    mod_guacamole
+ * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
+require_once(dirname(__FILE__).'/lib.php');
+require_once(dirname(__FILE__).'/locallib.php');
+require_once('../../config.php');
+require_once('./instances/lib.php');
+
+
+global $USER;
+
+$id = optional_param('id', 0, PARAM_INT);
+$n  = optional_param('n', 0, PARAM_INT);
+if ($id) {
+    $cm         = get_coursemodule_from_id('guacamole', $id, 0, false, MUST_EXIST);
+    $course     = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
+    $guacamole  = $DB->get_record('guacamole', array('id' => $cm->instance), '*', MUST_EXIST);
+} else if ($n) {
+    $guacamole  = $DB->get_record('guacamole', array('id' => $n), '*', MUST_EXIST);
+    $course     = $DB->get_record('course', array('id' => $guacamole->course), '*', MUST_EXIST);
+    $cm         = get_coursemodule_from_instance('guacamole', $guacamole->id, $course->id, false, MUST_EXIST);
+} else {
+
+    error('You must specify a course_module ID or an instance ID');
+}
+
+require_login($course, true, $cm);
+
+$event = \mod_guacamole\event\course_module_viewed::create(array(
+    'objectid' => $PAGE->cm->instance,
+    'context' => $PAGE->context,
+));
+$event->add_record_snapshot('course', $PAGE->course);
+$event->add_record_snapshot($PAGE->cm->modname, $guacamole);
+$event->trigger();
+
+$PAGE->set_url('/mod/guacamole/view.php', array('id' => $cm->id));
+$PAGE->set_title(format_string($guacamole->name));
+$PAGE->set_heading(format_string($course->fullname));
+echo "<script src=\"//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js\"></script>";
+echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"./styles.css\" media=\"screen\" />";
+
+echo $OUTPUT->header();
+echo $OUTPUT->heading($guacamole->name);
+if ($guacamole->intro) {
+    echo $OUTPUT->box(format_module_intro('guacamole', $guacamole, $cm->id), 'generalbox mod_introbox', 'guacamoleintro');
+}
+
+$imageid = $guacamole->imageid;
+$userid = $USER->id;
+
+$guacamoleimage = $DB->get_record('guacamole_images', array('id'=>$imageid));
+$instancesavailables = $guacamoleimage->maxnuminstances-getComputersUsed($imageid);
+$guacamolecomputer = null;
+$url = null;
+$urlAnt = null;$computerStarted = computerStartedByUser($userid, $imageid);
+if ($computerStarted!=null){
+    //Su máquina ya se está ejecutando
+    if ($computerStarted->state != 'deleting'){
+      $imageidant=$computerStarted;
+      echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
+      $dateTimeFormat = 'd-m-Y H:i:s';
+      $hourTimeFormat = 'H:i:s';
+      $dateC = new \DateTime();
+      $dateC->setTimestamp($computerStarted->timecreated);
+      echo "<p><b>".get_string('datecreation', 'guacamole')."</b>: ".$dateC->format($dateTimeFormat)."</p>";
+      $dateU = new \DateTime();
+      $dateU->setTimestamp($computerStarted->timelaststart);
+      $dateP = new \DateTime();
+      $dateP->setTimestamp($computerStarted->timetodelete);
+      echo "<p><b>".get_string('laststart', 'guacamole')."</b>: ".$dateU->format($dateTimeFormat)."</p>";
+      echo "<p><b>".get_string('datetodelete', 'guacamole')."</b>: ".$dateP->format($dateTimeFormat)."</p>";
+      echo "<p><b>".get_string('imagename', 'guacamole')."</b>: ".$computerStarted->cloudimage."</p>";
+      echo "<p><b>".get_string('state', 'guacamole')."</b>: ".$computerStarted->state."</p>";
+      echo "<button type=\"button\" class=\"btn btn-primary button\">".get_string('openvirtualmachine', 'guacamole')."</button>";
+      $guacamolecomputer = $computerStarted;
+      $imageid= $guacamolecomputer->imageid;
+      $url = './instances/start.php?img='.$imageid.'&usr='.$userid.'&id='.$id.'&gu='.$guacamole->id.'&comp='.$guacamolecomputer->id;
+      echo "</div>";
+    }else{
+      //La máquina se está borrando
+      echo "<div class=\"alert alert-danger\" role=\"alert\">";
+      echo "<p>".get_string('ondeleting', 'guacamole')."</p>";
+      echo "</div>";
+    }
+
+
+}else{
+    if ($instancesavailables > 0){
+        $guacamolecomputer=$DB->get_record('guacamole_computers', array('userid'=>$USER->id, 'imageid'=>$guacamoleimage->id));
+          if ($guacamolecomputer==null){
+              //NO hay ninguna creada
+              if ($guacamoleimage->active==1){
+                  echo "<button type=\"button\" class=\"btn btn-primary button\">".get_string('createandstart', 'guacamole')."</button>";
+                  $url = './instances/start.php?img='.$imageid.'&usr='.$userid.'&id='.$id.'&gu='.$guacamole->id.'&comp=0';
+              }else{
+                  echo "<div class=\"alert alert-danger\" role=\"alert\">";
+                  echo get_string('machinedesactivated', 'guacamole');
+                  echo "</div>";
+              }
+          }else{
+              //Hay una creada
+              if ($guacamolecomputer->state != 'deleting'){
+                  if ($guacamoleimage->active==1){
+                      if ($guacamoleimage->cloudimage == $guacamolecomputer->cloudimage){
+                          echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
+                          $dateTimeFormat = 'd-m-Y H:i:s';
+                          $hourTimeFormat = 'H:i:s';
+                          $dateC = new \DateTime();
+                          $dateC->setTimestamp($guacamolecomputer->timecreated);
+                          echo "<p><b>".get_string('datecreation', 'guacamole')."</b>: ".$dateC->format($dateTimeFormat)."</p>";
+                          $timedesconection = fechaDesconexion($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
+                          $date_U = new \DateTime();
+                          $date_U->setTimestamp($guacamolecomputer->timelaststart);
+                          echo "<p><b>".get_string('laststart', 'guacamole')."</b>: ".$date_U->format($dateTimeFormat)."</p>";
+                          $dateS = new \DateTime();
+                          $dateS->setTimestamp($guacamolecomputer->timetodelete);
+                          echo "<p><b>".get_string('datetodelete', 'guacamole')."</b>: ".$dateS->format($dateTimeFormat)."</p>";
+                          echo "<p><b>".get_string('imagename', 'guacamole')."</b>: ".$guacamolecomputer->cloudimage."</p>";
+                          echo "<p><b>".get_string('state', 'guacamole')."</b>: ".$guacamolecomputer->state."</p>";
+
+                          echo "<button type=\"button\" class=\"btn btn-primary button\">".get_string('start', 'guacamole')."</button>";
+                          $url = './instances/start.php?img='.$imageid.'&usr='.$userid.'&id='.$id.'&gu='.$guacamole->id.'&comp='.$guacamolecomputer->id;
+                          echo "</div>";
+                      }else{
+                          //las cloudimage son distintas
+                          echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
+                          $dateTimeFormat = 'd-m-Y H:i:s';
+                          $hourTimeFormat = 'H:i:s';
+                          $dateC = new \DateTime();
+                          $dateC->setTimestamp($guacamolecomputer->timecreated);
+                          echo "<p><b>".get_string('datecreation', 'guacamole')."</b>: ".$dateC->format($dateTimeFormat)."</p>";
+                          $timedesconection = fechaDesconexion($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
+                          $date_P = new \DateTime();
+                          $date_P->setTimestamp($timedesconection+$guacamolecomputer->minutestoshutdown*60);
+                          echo "<td class=\"text-center\">".get_string('laststart', 'guacamole').": ".$date_P->format($hourTimeFormat)."</p>";
+                          $dateS = new \DateTime();
+                          $dateS->setTimestamp($guacamolecomputer->timetodelete);
+                          echo "<p><b>".get_string('datetodelete', 'guacamole')."</b>: ".$dateS->format($dateTimeFormat)."</p>";
+                          echo "<p><b>".get_string('imagename', 'guacamole')."</b>: ".$guacamolecomputer->cloudimage."</p>";
+                          echo "<p><b>".get_string('state', 'guacamole')."</b>: ".$guacamolecomputer->state."</p>";
+
+                          echo "<button type=\"button\" class=\"btn btn-primary button\">".get_string('start', 'guacamole')."</button>";
+                          $url = './instances/start.php?img='.$imageid.'&usr='.$userid.'&id='.$id.'&gu='.$guacamole->id.'&comp='.$guacamolecomputer->id;
+                          echo "</div>";
+
+                          echo "<br><br>";
+                          echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px;\">";
+                          echo "<div class=\"alert alert-danger\" role=\"alert\">";
+                          echo "<h4 class=\"alert-heading\">".get_string('notice', 'guacamole')."</h4>";
+                          echo "<p>".get_string('machinenewbaseimage', 'guacamole')."</p>";
+                          echo "<hr>";
+                          echo "<p class\"mb-0\">".get_string('youcandeleteifyouwish', 'guacamole')."</p>";
+                          echo "</div>";
+
+                          echo "<button type=\"button\" class=\"btn btn-primary button2\">".get_string('createnewdeleting', 'guacamole')."</button>";
+                          $urlAnt = './instances/start.php?img='.$imageid.'&usr='.$userid.'&id='.$id.'&gu='.$guacamole->id.'&comp=0';
+                          echo "</div>";
+                      }
+                  }else{
+                    echo "<div class=\"alert alert-danger\" role=\"alert\">";
+                    echo get_string('machinedesactivated', 'guacamole');
+                    echo "</div>";
+                  }
+              }else{
+                  //La máquina se está borrando
+                  echo "<div class=\"alert alert-danger\" role=\"alert\">";
+                  echo get_string('ondeleting', 'guacamole');
+                  echo "</div>";
+              }
+        }
+    }else{
+        //No se puede crear, máximo alcanzado
+        echo "<div class=\"alert alert-danger\" role=\"alert\">";
+        echo get_string('noavailable', 'guacamole');
+        echo "</div>";
+      }
+}
+echo "<br>";
+echo "<br>";
+echo "<h2>".get_string('help', 'moodle')."</h2>";
+echo $CFG->guacamole_help;
+
+echo "<script>";
+echo    "$('.button').on('click', function(){";
+echo        "$('#region-main').html('<div class=\"alert alert-danger\" role=\"alert\">".get_string('openinnewtab', 'guacamole')."<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button></div>".$CFG->guacamole_help."');";
+echo        "window.open('".$url."', '_blank');";
+echo    "});";
+echo "</script>";
+echo "<script>";
+echo    "$('.button2').on('click', function(){";
+echo        "$('#region-main').html('<div class=\"alert alert-danger\" role=\"alert\">".get_string('openinnewtab', 'guacamole')."<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button></div>".$CFG->guacamole_help."');";
+echo        "window.open('".$urlAnt."', '_blank');";
+echo    "});";
+echo "</script>";
+
+echo $OUTPUT->footer();

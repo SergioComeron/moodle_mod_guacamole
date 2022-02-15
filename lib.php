@@ -1,0 +1,1019 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Library of interface functions and constants for module guacamole
+ *
+ * All the core Moodle functions, neeeded to allow the module to work
+ * integrated in Moodle should be placed here.
+ *
+ * All the guacamole specific functions, needed to implement all the module
+ * logic, should go to locallib.php. This will help to save some memory when
+ * Moodle is performing actions across all modules.
+ *
+ * @package    mod_guacamole
+ * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+defined('MOODLE_INTERNAL') || die();
+
+define('GUACAMOLE_ULTIMATE_ANSWER', 42);
+require_once($CFG->dirroot . '/mod/guacamole/instances/lib.php');
+/* Moodle core API */
+
+/**
+ * Returns the information on whether the module supports a feature
+ *
+ * See {@link plugin_supports()} for more info.
+ *
+ * @param string $feature FEATURE_xx constant for requested feature
+ * @return mixed true if the feature is supported, null if unknown
+ */
+function guacamole_supports($feature) {
+
+    switch($feature) {
+        case FEATURE_MOD_INTRO:
+            return true;
+        case FEATURE_SHOW_DESCRIPTION:
+            return true;
+        case FEATURE_GRADE_HAS_GRADE:
+            return true;
+        case FEATURE_BACKUP_MOODLE2:
+            return true;
+        default:
+            return null;
+    }
+}
+
+/**
+ * Saves a new instance of the guacamole into the database
+ *
+ * Given an object containing all the necessary data,
+ * (defined by the form in mod_form.php) this function
+ * will create a new instance and return the id number
+ * of the new instance.
+ *
+ * @param stdClass $guacamole Submitted data from the form in mod_form.php
+ * @param mod_guacamole_mod_form $mform The form instance itself (if needed)
+ * @return int The id of the newly inserted guacamole record
+ */
+function guacamole_add_instance($guacamole,  $mform = null) {
+    global $CFG, $DB;
+    require_once($CFG->dirroot.'/mod/guacamole/locallib.php');
+
+    $guacamole->timecreated = time();
+    $cmid       = $guacamole->coursemodule;
+    $guacamole->instancesinuse = 0;
+
+    $guacamole->id = $DB->insert_record('guacamole', $guacamole);
+    guacamole_update_calendar($guacamole, $cmid);
+
+    return $guacamole->id;
+}
+
+function guacamole_add_instance_in_use($guacamole){
+    global $DB;
+    $guacamoleimage = $DB->get_record('guacamole_imagenes', array('name'=>$guacamole->nombreinstance));
+
+    $guacamole->timemodified = time();
+    $guacamole->instancesinuse = $guacamole->instancesinuse+1;
+    $guacamoleimage->instancesinuse=$guacamoleimage->instancesinuse+1;
+    $DB->update_record('guacamole', $guacamole);
+    $DB->update_record('guacamole_imagenes', $guacamoleimage);
+}
+
+function guacamole_remove_instance_in_use($guacamole){
+    global $DB;
+    $guacamoleimage = $DB->get_record('guacamole_imagenes', array('name'=>$guacamole->nombreinstance));
+
+    $guacamole->timemodified = time();
+    $guacamole->instancesinuse=$guacamole->instancesinuse-1;
+    $guacamoleimage->instancesinuse=$guacamoleimage->instancesinuse-1;
+    $DB->update_record('guacamole', $guacamole);
+    $DB->update_record('guacamole_imagenes', $guacamoleimage);
+}
+
+function get_instance($id){
+    $guacamole = $DB->get_record('guacamole', array('id'=>'3'));
+    return $guacamole;
+}
+
+/**
+ * Updates an instance of the guacamole in the database
+ *
+ * Given an object containing all the necessary data,
+ * (defined by the form in mod_form.php) this function
+ * will update an existing instance with new data.
+ *
+ * @param stdClass $guacamole An object from the form in mod_form.php
+ * @param mod_guacamole_mod_form $mform The form instance itself (if needed)
+ * @return boolean Success/Fail
+ */
+function guacamole_update_instance($guacamole,  $mform = null) {
+    global $CFG, $DB;
+    require_once($CFG->dirroot.'/mod/guacamole/locallib.php');
+
+    $guacamole->timemodified = time();
+    $guacamole->id = $guacamole->instance;
+    $cmid       = $guacamole->coursemodule;
+
+    $result = $DB->update_record('guacamole', $guacamole);
+    guacamole_update_calendar($guacamole, $cmid);
+
+    return $result;
+}
+
+/**
+ * This standard function will check all instances of this module
+ * and make sure there are up-to-date events created for each of them.
+ * If courseid = 0, then every guacamole event in the site is checked, else
+ * only guacamole events belonging to the course specified are checked.
+ * This is only required if the module is generating calendar events.
+ *
+ * @param int $courseid Course ID
+ * @return bool
+ */
+function guacamole_refresh_events($courseid = 0, $instance = null, $cm = null) {
+    global $CFG, $DB;
+    require_once($CFG->dirroot . '/mod/guacamole/locallib.php');
+
+    if (isset($instance)) {
+        if (!is_object($instance)) {
+            $instance = $DB->get_record('guacamole', array('id' => $instance), '*', MUST_EXIST);
+        }
+        if (isset($cm)) {
+            if (!is_object($cm)) {
+                $cm = (object)array('id' => $cm);
+            }
+        } else {
+            $cm = get_coursemodule_from_instance('guacamole', $instance->id);
+        }
+        guacamole_update_calendar($instance, $cm->id);
+        return true;
+    }
+
+    if ($courseid) {
+      if (!is_numeric($courseid)) {
+          return false;
+      }
+      if (!$scorms = $DB->get_records('guacamole', array('guacamole' => $courseid))) {
+          return true;
+      }
+    } else {
+        if (!$guacamoles = $DB->get_records('guacamole', array('course' => $courseid))) {
+            return true;
+        }
+    }
+
+    foreach ($guacamoles as $guacamole) {
+        // Create a function such as the one below to deal with updating calendar events.
+        $cm = get_coursemodule_from_instance('guacamole', $guacamole->id);
+        guacamole_update_calendar($guacamole, $cm->id);
+    }
+    return true;
+}
+
+/**
+ * Removes an instance of the guacamole from the database
+ *
+ * Given an ID of an instance of this module,
+ * this function will permanently delete the instance
+ * and any data that depends on it.
+ *
+ * @param int $id Id of the module instance
+ * @return boolean Success/Failure
+ */
+function guacamole_delete_instance($id) {
+    global $CFG, $DB;
+
+    if (! $guacamole = $DB->get_record('guacamole', array('id' => $id))) {
+        return false;
+    }
+    $result = true;
+    if (! $DB->delete_records('guacamole', array('id' => $guacamole->id))) {
+        $result = false;
+    }
+    return $result;
+}
+
+/**
+ * Returns a small object with summary information about what a
+ * user has done with a given particular instance of this module
+ * Used for user activity reports.
+ *
+ * $return->time = the time they did it
+ * $return->info = a short text description
+ *
+ * @param stdClass $course The course record
+ * @param stdClass $user The user record
+ * @param cm_info|stdClass $mod The course module info object or record
+ * @param stdClass $guacamole The guacamole instance record
+ * @return stdClass|null
+ */
+function guacamole_user_outline($course, $user, $mod, $guacamole) {
+    $return = new stdClass();
+    $return->time = 0;
+    $return->info = '';
+    return $return;
+}
+
+/**
+ * Prints a detailed representation of what a user has done with
+ * a given particular instance of this module, for user activity reports.
+ *
+ * It is supposed to echo directly without returning a value.
+ *
+ * @param stdClass $course the current course record
+ * @param stdClass $user the record of the user we are generating report for
+ * @param cm_info $mod course module info
+ * @param stdClass $guacamole the module instance record
+ */
+function guacamole_user_complete($course, $user, $mod, $guacamole) {
+}
+
+/**
+ * Given a course and a time, this module should find recent activity
+ * that has occurred in guacamole activities and print it out.
+ *
+ * @param stdClass $course The course record
+ * @param bool $viewfullnames Should we display full names
+ * @param int $timestart Print activity since this timestamp
+ * @return boolean True if anything was printed, otherwise false
+ */
+function guacamole_print_recent_activity($course, $viewfullnames, $timestart) {
+    return false;
+}
+
+/**
+ * Prepares the recent activity data
+ *
+ * This callback function is supposed to populate the passed array with
+ * custom activity records. These records are then rendered into HTML via
+ * {@link guacamole_print_recent_mod_activity()}.
+ *
+ * Returns void, it adds items into $activities and increases $index.
+ *
+ * @param array $activities sequentially indexed array of objects with added 'cmid' property
+ * @param int $index the index in the $activities to use for the next record
+ * @param int $timestart append activity since this time
+ * @param int $courseid the id of the course we produce the report for
+ * @param int $cmid course module id
+ * @param int $userid check for a particular user's activity only, defaults to 0 (all users)
+ * @param int $groupid check for a particular group's activity only, defaults to 0 (all groups)
+ */
+function guacamole_get_recent_mod_activity(&$activities, &$index, $timestart, $courseid, $cmid, $userid=0, $groupid=0) {
+}
+
+/**
+ * Prints single activity item prepared by {@link guacamole_get_recent_mod_activity()}
+ *
+ * @param stdClass $activity activity record with added 'cmid' property
+ * @param int $courseid the id of the course we produce the report for
+ * @param bool $detail print detailed report
+ * @param array $modnames as returned by {@link get_module_types_names()}
+ * @param bool $viewfullnames display users' full names
+ */
+function guacamole_print_recent_mod_activity($activity, $courseid, $detail, $modnames, $viewfullnames) {
+}
+
+/**
+ * Function to be run periodically according to the moodle cron
+ *
+ * This function searches for things that need to be done, such
+ * as sending out mail, toggling flags etc ...
+ *
+ * Note that this has been deprecated in favour of scheduled task API.
+ *
+ * @return boolean
+ */
+
+function tiene_permiso($idConnection){
+    global $CFG;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    $parametros='username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/users/sergio.comeron/permissions?token='.$tokens;
+    $ch = curl_init($urlapi);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $res=curl_exec($ch);
+    curl_close($ch);
+    $var = json_decode($res, true);
+    $permisos = array_column($var, $idConnection);
+    var_dump($permisos);
+}
+
+function fechaDesconexion($instancia){
+    global $CFG;
+    //$date = time();
+    $date = 0;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    $parametros='username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/history/connections?order=-startDate&token='.$tokens;
+    $ch = curl_init($urlapi);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $res=curl_exec($ch);
+    curl_close($ch);
+    $var = json_decode($res, true);
+    $pasa=1;
+    $fechaDes = null;
+    for($i=0; $i<sizeof($var); $i++){
+        if (($var[$i]['connectionName']==$instancia)&&($pasa==1)){
+            $fechaDes = $var[$i]['endDate'];
+            $pasa=0;
+        }
+    }
+    if ($fechaDes!=null){
+      $date = $fechaDes/1000;
+    }
+    return $date;
+}
+
+function existeInstanciaGuacamole($idConnection){
+    global $CFG;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token='.$tokens;
+    $ch = curl_init($urlapi);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $res=curl_exec($ch);
+    curl_close($ch);
+    $var = json_decode($res, true);
+    $permisos = $var['childConnections'];
+
+    foreach ($permisos as $permiso){
+        if (strcmp ($permiso['name'], $idConnection)==true){
+            return true;
+        }
+    }
+    return false;
+}
+
+function obtenerIdInstanciaGuacamole($nombreInstancia){
+    global $CFG;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token='.$tokens;
+    $ch = curl_init($urlapi);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $res=curl_exec($ch);
+    curl_close($ch);
+    $var = json_decode($res, true);
+
+    $guacamoles = $var['childConnections'];
+    foreach ($guacamoles as $guacamole){
+        if (strcmp ($guacamole['name'], $nombreInstancia)==0){
+            return $guacamole['identifier'];
+        }
+    }
+}
+
+function obtainidimage($image){
+  global $CFG;
+  $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+  $ch = curl_init($urlapi);
+  $nombreDeUsuario=$CFG->guacamole_user;
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+  $res = curl_exec($ch);
+  $var = json_decode($res, true);
+  curl_close($ch);
+
+  $tokens=$var['authToken'];
+
+  $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token='.$tokens;
+  $ch = curl_init($urlapi);
+
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  $res=curl_exec($ch);
+  curl_close($ch);
+  $var = json_decode($res, true);
+  $guacamoles = $var['childConnectionGroups'];
+  //$resul=0;
+  foreach ($guacamoles as $guacamole){
+    if (strcmp($guacamole['name'],$CFG->guacamole_template_group)==0){
+      $guacamoletemplate=$guacamole['childConnections'];
+      foreach ($guacamoletemplate as $guacamoleimagen){
+        if (strcasecmp($guacamoleimagen['name'],$image)==0){
+          return $guacamoleimagen['identifier'];
+        }
+      }
+    }
+  }
+}
+
+function obtenerLaboratorios(){
+    global $CFG;
+    $opciones=array();
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token='.$tokens;
+    $ch = curl_init($urlapi);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $res=curl_exec($ch);
+    curl_close($ch);
+    $var = json_decode($res, true);
+    $guacamoles = $var['childConnectionGroups'];
+
+    foreach ($guacamoles as $guacamole){
+        if (strcmp ($guacamole['name'], $CFG->guacamole_template_group)==0){
+            $instancias=$guacamole['childConnections'];
+            foreach ($instancias as $instancia){
+                array_push($opciones, $instancia['name']);
+            }
+            return $opciones;
+        }
+    }
+}
+
+function getComputersUsed($image){
+  global $CFG, $DB;
+  $computersused = 0;
+  $guacamolecomputers = $DB->get_records('guacamole_computers', array());
+  foreach ($guacamolecomputers as $guacamolecomputer){
+    if (($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'started')==0 )||($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'loading')==0 )||($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'shutdown')==0 )){
+      $computersused +=1;
+    }
+  }
+  return $computersused;
+}
+
+function obtenerLaboratoriosName(){
+    global $CFG;
+    $opciones=array();
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+    $tokens=$var['authToken'];
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token='.$tokens;
+    $ch = curl_init($urlapi);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $res=curl_exec($ch);
+    curl_close($ch);
+    $var = json_decode($res, true);
+    $guacamoles = $var['childConnectionGroups'];
+    foreach ($guacamoles as $guacamole){
+        if (strcmp ($guacamole['name'], $CFG->guacamole_template_group)==0){
+            $instancias=$guacamole['childConnections'];
+            foreach ($instancias as $instancia){
+                //$opciones[$instancia['name']] = strtolower($instancia['name']);
+                $opciones[$instancia['identifier']] = strtolower($instancia['name']);
+            }
+            return $opciones;
+        }
+    }
+}
+
+function crearConexion($imageid, $userid, $compname){
+    global $CFG, $DB;
+    $image=$DB->get_record('guacamole_images', array('id'=>$imageid));
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connections?token='.$tokens;
+    $ch = curl_init($urlapi);
+
+    $originalparameters = getinstanceparameters($image->guaidconnection);
+
+    $originalinfo = getinfoinstance($image->guaidconnection);
+    unset($originalinfo['identifier']);
+    //$computername = $image->cloudimage.'-'.$image->id.'-'.$userid;
+    $computername = $compname;
+    $originalinfo['name']=$computername;
+    $originalinfo['parentIdentifier']="ROOT";
+    $originalparameters['hostname']=$computername;
+    $originalinfo['parameters']=$originalparameters;
+
+
+    $parameters = json_encode($originalinfo);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $parameters);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    return $var['identifier'];
+}
+
+function getinstanceparameters($instance){
+  global $CFG;
+  $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+  $ch = curl_init($urlapi);
+  $nombreDeUsuario=$CFG->guacamole_user;
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+  $res = curl_exec($ch);
+  $var = json_decode($res, true);
+  curl_close($ch);
+  $tokens=$var['authToken'];
+  $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connections/'.$instance.'/parameters?token='.$tokens;
+
+  $ch = curl_init($urlapi);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  $res = curl_exec($ch);
+  curl_close($ch);
+  //echo $urlapi;
+  return json_decode($res, true);
+}
+
+function getinfoinstance($instance){
+  global $CFG;
+  $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+  $ch = curl_init($urlapi);
+  $nombreDeUsuario=$CFG->guacamole_user;
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+  $res = curl_exec($ch);
+  $var = json_decode($res, true);
+  curl_close($ch);
+
+  $tokens=$var['authToken'];
+  $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connections/'.$instance.'?token='.$tokens;
+
+  $ch = curl_init($urlapi);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+  $res = curl_exec($ch);
+  curl_close($ch);
+
+  return json_decode($res, true);
+}
+
+function eliminarConexion($instance){
+    global $CFG;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/connections/'.$instance.'?token='.$tokens;
+    $ch = curl_init($urlapi);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+
+    $res = curl_exec($ch);
+    curl_close($ch);
+}
+
+function darPermiso($instance, $user){
+    global $CFG;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+    $urlapi = $CFG->guacamole_domain."/guacamole/api/session/data/mysql/users/".$user."/permissions?token=".$tokens;
+    $ch = curl_init($urlapi);
+
+    $parametros = '[{"op":"add","path":"/connectionPermissions/'.$instance.'","value":"READ"}]';
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $parametros);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+}
+
+function quitarPermiso($instance, $user){
+    global $CFG;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/users/'.$user.'/permissions?token='.$tokens;
+    $ch = curl_init($urlapi);
+    $parametros = '[{"op":"remove","path":"/connectionPermissions/'.$instance.'","value":"READ"}]';
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $parametros);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+}
+
+  function crearUsuario($user){
+    global $CFG;
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/tokens';
+    $ch = curl_init($urlapi);
+    $nombreDeUsuario=$CFG->guacamole_user;
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+
+    $tokens=$var['authToken'];
+
+    $urlapi = $CFG->guacamole_domain.'/guacamole/api/session/data/mysql/users?token='.$tokens;
+    $ch = curl_init($urlapi);
+    $parametros = '{"username":"'.$user.'","attributes":{
+      "disabled":"",
+      "expired":"",
+      "access-window-start":"",
+      "valid-from":"",
+      "valid-until":"",
+      "timezone":""
+    }}';
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $parametros);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+
+    $res = curl_exec($ch);
+    $var = json_decode($res, true);
+    curl_close($ch);
+  }
+
+  function getinstancesinuse($image){
+    $res = 0;
+    return $res;
+  }
+
+  function computerStartedByUser($userid, $imageid){
+    global $DB;
+    $guacamoleimage = $DB->get_record('guacamole_computers', array('userid'=>$userid, 'imageid'=>$imageid, 'state'=>'started'));
+    if ($guacamoleimage != null){
+      return $guacamoleimage;
+    }else{
+      return null;
+    }
+  }
+
+
+/**
+ * Returns all other caps used in the module
+ *
+ * For example, this could be array('moodle/site:accessallgroups') if the
+ * module uses that capability.
+ *
+ * @return array
+ */
+function guacamole_get_extra_capabilities() {
+    return array();
+}
+
+/* Gradebook API */
+
+/**
+ * Is a given scale used by the instance of guacamole?
+ *
+ * This function returns if a scale is being used by one guacamole
+ * if it has support for grading and scales.
+ *
+ * @param int $guacamoleid ID of an instance of this module
+ * @param int $scaleid ID of the scale
+ * @return bool true if the scale is used by the given guacamole instance
+ */
+function guacamole_scale_used($guacamoleid, $scaleid) {
+    global $DB;
+
+    if ($scaleid and $DB->record_exists('guacamole', array('id' => $guacamoleid, 'grade' => -$scaleid))) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/**
+ * Checks if scale is being used by any instance of guacamole.
+ *
+ * This is used to find out if scale used anywhere.
+ *
+ * @param int $scaleid ID of the scale
+ * @return boolean true if the scale is used by any guacamole instance
+ */
+function guacamole_scale_used_anywhere($scaleid) {
+    global $DB;
+
+    if ($scaleid and $DB->record_exists('guacamole', array('grade' => -$scaleid))) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/**
+ * Creates or updates grade item for the given guacamole instance
+ *
+ * Needed by {@link grade_update_mod_grades()}.
+ *
+ * @param stdClass $guacamole instance object with extra cmidnumber and modname property
+ * @param bool $reset reset grades in the gradebook
+ * @return void
+ */
+function guacamole_grade_item_update(stdClass $guacamole, $reset=false) {
+    global $CFG;
+    require_once($CFG->libdir.'/gradelib.php');
+
+    $item = array();
+    $item['itemname'] = clean_param($guacamole->name, PARAM_NOTAGS);
+    $item['gradetype'] = GRADE_TYPE_VALUE;
+
+    if ($guacamole->grade > 0) {
+        $item['gradetype'] = GRADE_TYPE_VALUE;
+        $item['grademax']  = $guacamole->grade;
+        $item['grademin']  = 0;
+    } else if ($guacamole->grade < 0) {
+        $item['gradetype'] = GRADE_TYPE_SCALE;
+        $item['scaleid']   = -$guacamole->grade;
+    } else {
+        $item['gradetype'] = GRADE_TYPE_NONE;
+    }
+
+    if ($reset) {
+        $item['reset'] = true;
+    }
+
+    grade_update('mod/guacamole', $guacamole->course, 'mod', 'guacamole',
+            $guacamole->id, 0, null, $item);
+}
+
+/**
+ * Delete grade item for given guacamole instance
+ *
+ * @param stdClass $guacamole instance object
+ * @return grade_item
+ */
+function guacamole_grade_item_delete($guacamole) {
+    global $CFG;
+    require_once($CFG->libdir.'/gradelib.php');
+
+    return grade_update('mod/guacamole', $guacamole->course, 'mod', 'guacamole',
+            $guacamole->id, 0, null, array('deleted' => 1));
+}
+
+/**
+ * Update guacamole grades in the gradebook
+ *
+ * Needed by {@link grade_update_mod_grades()}.
+ *
+ * @param stdClass $guacamole instance object with extra cmidnumber and modname property
+ * @param int $userid update grade of specific user only, 0 means all participants
+ */
+function guacamole_update_grades(stdClass $guacamole, $userid = 0) {
+    global $CFG, $DB;
+    require_once($CFG->libdir.'/gradelib.php');
+
+    // Populate array of grade objects indexed by userid.
+    $grades = array();
+
+    grade_update('mod/guacamole', $guacamole->course, 'mod', 'guacamole', $guacamole->id, 0, $grades);
+}
+
+/* File API */
+
+/**
+ * Returns the lists of all browsable file areas within the given module context
+ *
+ * The file area 'intro' for the activity introduction field is added automatically
+ * by {@link file_browser::get_file_info_context_module()}
+ *
+ * @param stdClass $course
+ * @param stdClass $cm
+ * @param stdClass $context
+ * @return array of [(string)filearea] => (string)description
+ */
+function guacamole_get_file_areas($course, $cm, $context) {
+    return array();
+}
+
+/**
+ * File browsing support for guacamole file areas
+ *
+ * @package mod_guacamole
+ * @category files
+ *
+ * @param file_browser $browser
+ * @param array $areas
+ * @param stdClass $course
+ * @param stdClass $cm
+ * @param stdClass $context
+ * @param string $filearea
+ * @param int $itemid
+ * @param string $filepath
+ * @param string $filename
+ * @return file_info instance or null if not found
+ */
+function guacamole_get_file_info($browser, $areas, $course, $cm, $context, $filearea, $itemid, $filepath, $filename) {
+    return null;
+}
+
+/**
+ * Serves the files from the guacamole file areas
+ *
+ * @package mod_guacamole
+ * @category files
+ *
+ * @param stdClass $course the course object
+ * @param stdClass $cm the course module object
+ * @param stdClass $context the guacamole's context
+ * @param string $filearea the name of the file area
+ * @param array $args extra arguments (itemid, path)
+ * @param bool $forcedownload whether or not force download
+ * @param array $options additional options affecting the file serving
+ */
+function guacamole_pluginfile($course, $cm, $context, $filearea, array $args, $forcedownload, array $options=array()) {
+    //global $DB, $CFG;
+
+    if ($context->contextlevel == CONTEXT_SYSTEM && ($filearea === 'jsonfile')) {
+        $fs = get_file_storage();
+        $file = $fs->get_file($context->id, 'mod_guacamole', 'jsonfile', 0, '/', get_config('mod_guacamole', 'jsonfile'));
+
+        return send_stored_file($file, 0, 0, $forcedownload);
+    }
+}
+
+/* Navigation API */
+
+/**
+ * Extends the global navigation tree by adding guacamole nodes if there is a relevant content
+ *
+ * This can be called by an AJAX request so do not rely on $PAGE as it might not be set up properly.
+ *
+ * @param navigation_node $navref An object representing the navigation tree node of the guacamole module instance
+ * @param stdClass $course current course record
+ * @param stdClass $module current guacamole instance record
+ * @param cm_info $cm course module information
+ */
+function guacamole_extend_navigation(navigation_node $navref, stdClass $course, stdClass $module, cm_info $cm) {
+    // TODO Delete this function and its docblock, or implement it.
+}
+
+/**
+ * Extends the settings navigation with the guacamole settings
+ *
+ * This function is called when the context for the page is a guacamole module. This is not called by AJAX
+ * so it is safe to rely on the $PAGE.
+ *
+ * @param settings_navigation $settingsnav complete settings navigation tree
+ * @param navigation_node $guacamolenode guacamole administration node
+ */
+function guacamole_extend_settings_navigation(settings_navigation $settingsnav, navigation_node $guacamolenode=null) {
+    // TODO Delete this function and its docblock, or implement it.
+}
