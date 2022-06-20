@@ -54,6 +54,7 @@ if (existDisk($computername)==false){
     $guacamolecomputer->minutestoshutdown = $guacamole->minutestoshutdown;
     $guacamolecomputer->daystodelete = $guacamole->daystodelete;
     $guacamolecomputer->timetodelete = $timecreated + ($guacamole->daystodelete*60*60*24);
+    $guacamolecomputer->root = $CFG->wwwroot;
     $DB->insert_record('guacamole_computers', $guacamolecomputer);
     createInstance($image->id,$user->id);
     $computername=strtolower($computername);

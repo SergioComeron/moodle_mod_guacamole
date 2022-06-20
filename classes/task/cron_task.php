@@ -69,7 +69,7 @@ class cron_task extends \core\task\scheduled_task {
         $users = array_column($var, 'username');
         $connections = array_column($var, 'connectionIdentifier');
 
-        $guacamolecomputers = $DB->get_records('guacamole_computers', array('state'=>'started'));
+        $guacamolecomputers = $DB->get_records('guacamole_computers', array('state'=>'started', 'root'=>$CFG->wwwroot));
         foreach ($guacamolecomputers as $guacamolecomputer){
             echo ($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
             $timelaststart = $guacamolecomputer->timelaststart;

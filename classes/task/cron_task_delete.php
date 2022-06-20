@@ -44,7 +44,7 @@ class cron_task_delete extends \core\task\scheduled_task {
     public function execute() {
         global $CFG, $DB;
 
-        $guacamolecomputers = $DB->get_records('guacamole_computers', array('state'=>'stopped'));
+        $guacamolecomputers = $DB->get_records('guacamole_computers', array('state'=>'stopped', 'root'=>$CFG->wwwroot));
 
         foreach ($guacamolecomputers as $guacamolecomputer){
           echo $guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid;
