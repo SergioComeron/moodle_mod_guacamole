@@ -45,4 +45,11 @@ class course_module_viewed extends \core\event\course_module_viewed {
         $this->data['objecttable'] = 'guacamole';
         parent::init();
     }
+
+    /**
+     * Mapping between log fields and event properties.
+     */
+    public static function get_objectid_mapping() {
+        return array('db' => 'jitsi', 'restore' => 'jitsi');
+    }
 }
