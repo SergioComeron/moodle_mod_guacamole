@@ -84,7 +84,7 @@ function createInstance($imageid, $userid){
   $new_disk->setName($instancia);
 
   // Cambia el tipo de disco aquí
-  $new_disk->setType('pd-ssd'); //pd-ssd o pd-standard
+  $new_disk->setDiskType('projects/'.$CFG->guacamole_project_cloud.'/zones/'.$CFG->guacamole_zone_cloud.'/diskTypes/pd-ssd'); //pd-ssd o pd-standard
 
   $imageDisk = $image->cloudimage;
   $new_disk->setSourceImage('https://www.googleapis.com/compute/v1/projects/'.$CFG->guacamole_project_cloud.'/global/images/'.$imageDisk);
