@@ -23,11 +23,19 @@ class Image extends \Google\Collection
   /**
    * @var string
    */
+  public $architecture;
+  /**
+   * @var string
+   */
   public $archiveSizeBytes;
   /**
    * @var string
    */
   public $creationTimestamp;
+  /**
+   * @var DeprecationStatus
+   */
+  public $deprecated;
   protected $deprecatedType = DeprecationStatus::class;
   protected $deprecatedDataType = '';
   /**
@@ -39,15 +47,27 @@ class Image extends \Google\Collection
    */
   public $diskSizeGb;
   /**
+   * @var bool
+   */
+  public $enableConfidentialCompute;
+  /**
    * @var string
    */
   public $family;
+  /**
+   * @var GuestOsFeature[]
+   */
+  public $guestOsFeatures;
   protected $guestOsFeaturesType = GuestOsFeature::class;
   protected $guestOsFeaturesDataType = 'array';
   /**
    * @var string
    */
   public $id;
+  /**
+   * @var CustomerEncryptionKey
+   */
+  public $imageEncryptionKey;
   protected $imageEncryptionKeyType = CustomerEncryptionKey::class;
   protected $imageEncryptionKeyDataType = '';
   /**
@@ -74,8 +94,16 @@ class Image extends \Google\Collection
    * @var string
    */
   public $name;
+  /**
+   * @var ImageRawDisk
+   */
+  public $rawDisk;
   protected $rawDiskType = ImageRawDisk::class;
   protected $rawDiskDataType = '';
+  /**
+   * @var bool
+   */
+  public $satisfiesPzi;
   /**
    * @var bool
    */
@@ -84,12 +112,20 @@ class Image extends \Google\Collection
    * @var string
    */
   public $selfLink;
+  /**
+   * @var InitialStateConfig
+   */
+  public $shieldedInstanceInitialState;
   protected $shieldedInstanceInitialStateType = InitialStateConfig::class;
   protected $shieldedInstanceInitialStateDataType = '';
   /**
    * @var string
    */
   public $sourceDisk;
+  /**
+   * @var CustomerEncryptionKey
+   */
+  public $sourceDiskEncryptionKey;
   protected $sourceDiskEncryptionKeyType = CustomerEncryptionKey::class;
   protected $sourceDiskEncryptionKeyDataType = '';
   /**
@@ -100,6 +136,10 @@ class Image extends \Google\Collection
    * @var string
    */
   public $sourceImage;
+  /**
+   * @var CustomerEncryptionKey
+   */
+  public $sourceImageEncryptionKey;
   protected $sourceImageEncryptionKeyType = CustomerEncryptionKey::class;
   protected $sourceImageEncryptionKeyDataType = '';
   /**
@@ -110,6 +150,10 @@ class Image extends \Google\Collection
    * @var string
    */
   public $sourceSnapshot;
+  /**
+   * @var CustomerEncryptionKey
+   */
+  public $sourceSnapshotEncryptionKey;
   protected $sourceSnapshotEncryptionKeyType = CustomerEncryptionKey::class;
   protected $sourceSnapshotEncryptionKeyDataType = '';
   /**
@@ -129,6 +173,20 @@ class Image extends \Google\Collection
    */
   public $storageLocations;
 
+  /**
+   * @param string
+   */
+  public function setArchitecture($architecture)
+  {
+    $this->architecture = $architecture;
+  }
+  /**
+   * @return string
+   */
+  public function getArchitecture()
+  {
+    return $this->architecture;
+  }
   /**
    * @param string
    */
@@ -198,6 +256,20 @@ class Image extends \Google\Collection
   public function getDiskSizeGb()
   {
     return $this->diskSizeGb;
+  }
+  /**
+   * @param bool
+   */
+  public function setEnableConfidentialCompute($enableConfidentialCompute)
+  {
+    $this->enableConfidentialCompute = $enableConfidentialCompute;
+  }
+  /**
+   * @return bool
+   */
+  public function getEnableConfidentialCompute()
+  {
+    return $this->enableConfidentialCompute;
   }
   /**
    * @param string
@@ -352,6 +424,20 @@ class Image extends \Google\Collection
   public function getRawDisk()
   {
     return $this->rawDisk;
+  }
+  /**
+   * @param bool
+   */
+  public function setSatisfiesPzi($satisfiesPzi)
+  {
+    $this->satisfiesPzi = $satisfiesPzi;
+  }
+  /**
+   * @return bool
+   */
+  public function getSatisfiesPzi()
+  {
+    return $this->satisfiesPzi;
   }
   /**
    * @param bool

@@ -20,6 +20,10 @@ namespace Google\Service\Compute;
 class InterconnectDiagnosticsLinkStatus extends \Google\Collection
 {
   protected $collection_key = 'arpCaches';
+  /**
+   * @var InterconnectDiagnosticsARPEntry[]
+   */
+  public $arpCaches;
   protected $arpCachesType = InterconnectDiagnosticsARPEntry::class;
   protected $arpCachesDataType = 'array';
   /**
@@ -30,10 +34,32 @@ class InterconnectDiagnosticsLinkStatus extends \Google\Collection
    * @var string
    */
   public $googleDemarc;
+  /**
+   * @var InterconnectDiagnosticsLinkLACPStatus
+   */
+  public $lacpStatus;
   protected $lacpStatusType = InterconnectDiagnosticsLinkLACPStatus::class;
   protected $lacpStatusDataType = '';
+  /**
+   * @var InterconnectDiagnosticsMacsecStatus
+   */
+  public $macsec;
+  protected $macsecType = InterconnectDiagnosticsMacsecStatus::class;
+  protected $macsecDataType = '';
+  /**
+   * @var string
+   */
+  public $operationalStatus;
+  /**
+   * @var InterconnectDiagnosticsLinkOpticalPower
+   */
+  public $receivingOpticalPower;
   protected $receivingOpticalPowerType = InterconnectDiagnosticsLinkOpticalPower::class;
   protected $receivingOpticalPowerDataType = '';
+  /**
+   * @var InterconnectDiagnosticsLinkOpticalPower
+   */
+  public $transmittingOpticalPower;
   protected $transmittingOpticalPowerType = InterconnectDiagnosticsLinkOpticalPower::class;
   protected $transmittingOpticalPowerDataType = '';
 
@@ -92,6 +118,34 @@ class InterconnectDiagnosticsLinkStatus extends \Google\Collection
   public function getLacpStatus()
   {
     return $this->lacpStatus;
+  }
+  /**
+   * @param InterconnectDiagnosticsMacsecStatus
+   */
+  public function setMacsec(InterconnectDiagnosticsMacsecStatus $macsec)
+  {
+    $this->macsec = $macsec;
+  }
+  /**
+   * @return InterconnectDiagnosticsMacsecStatus
+   */
+  public function getMacsec()
+  {
+    return $this->macsec;
+  }
+  /**
+   * @param string
+   */
+  public function setOperationalStatus($operationalStatus)
+  {
+    $this->operationalStatus = $operationalStatus;
+  }
+  /**
+   * @return string
+   */
+  public function getOperationalStatus()
+  {
+    return $this->operationalStatus;
   }
   /**
    * @param InterconnectDiagnosticsLinkOpticalPower

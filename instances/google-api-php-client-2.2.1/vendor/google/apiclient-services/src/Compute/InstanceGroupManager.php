@@ -20,6 +20,10 @@ namespace Google\Service\Compute;
 class InstanceGroupManager extends \Google\Collection
 {
   protected $collection_key = 'versions';
+  /**
+   * @var InstanceGroupManagerAutoHealingPolicy[]
+   */
+  public $autoHealingPolicies;
   protected $autoHealingPoliciesType = InstanceGroupManagerAutoHealingPolicy::class;
   protected $autoHealingPoliciesDataType = 'array';
   /**
@@ -30,12 +34,20 @@ class InstanceGroupManager extends \Google\Collection
    * @var string
    */
   public $creationTimestamp;
+  /**
+   * @var InstanceGroupManagerActionsSummary
+   */
+  public $currentActions;
   protected $currentActionsType = InstanceGroupManagerActionsSummary::class;
   protected $currentActionsDataType = '';
   /**
    * @var string
    */
   public $description;
+  /**
+   * @var DistributionPolicy
+   */
+  public $distributionPolicy;
   protected $distributionPolicyType = DistributionPolicy::class;
   protected $distributionPolicyDataType = '';
   /**
@@ -51,6 +63,12 @@ class InstanceGroupManager extends \Google\Collection
    */
   public $instanceGroup;
   /**
+   * @var InstanceGroupManagerInstanceLifecyclePolicy
+   */
+  public $instanceLifecyclePolicy;
+  protected $instanceLifecyclePolicyType = InstanceGroupManagerInstanceLifecyclePolicy::class;
+  protected $instanceLifecyclePolicyDataType = '';
+  /**
    * @var string
    */
   public $instanceTemplate;
@@ -61,7 +79,15 @@ class InstanceGroupManager extends \Google\Collection
   /**
    * @var string
    */
+  public $listManagedInstancesResults;
+  /**
+   * @var string
+   */
   public $name;
+  /**
+   * @var NamedPort[]
+   */
+  public $namedPorts;
   protected $namedPortsType = NamedPort::class;
   protected $namedPortsDataType = 'array';
   /**
@@ -72,8 +98,16 @@ class InstanceGroupManager extends \Google\Collection
    * @var string
    */
   public $selfLink;
+  /**
+   * @var StatefulPolicy
+   */
+  public $statefulPolicy;
   protected $statefulPolicyType = StatefulPolicy::class;
   protected $statefulPolicyDataType = '';
+  /**
+   * @var InstanceGroupManagerStatus
+   */
+  public $status;
   protected $statusType = InstanceGroupManagerStatus::class;
   protected $statusDataType = '';
   /**
@@ -84,8 +118,16 @@ class InstanceGroupManager extends \Google\Collection
    * @var int
    */
   public $targetSize;
+  /**
+   * @var InstanceGroupManagerUpdatePolicy
+   */
+  public $updatePolicy;
   protected $updatePolicyType = InstanceGroupManagerUpdatePolicy::class;
   protected $updatePolicyDataType = '';
+  /**
+   * @var InstanceGroupManagerVersion[]
+   */
+  public $versions;
   protected $versionsType = InstanceGroupManagerVersion::class;
   protected $versionsDataType = 'array';
   /**
@@ -220,6 +262,20 @@ class InstanceGroupManager extends \Google\Collection
     return $this->instanceGroup;
   }
   /**
+   * @param InstanceGroupManagerInstanceLifecyclePolicy
+   */
+  public function setInstanceLifecyclePolicy(InstanceGroupManagerInstanceLifecyclePolicy $instanceLifecyclePolicy)
+  {
+    $this->instanceLifecyclePolicy = $instanceLifecyclePolicy;
+  }
+  /**
+   * @return InstanceGroupManagerInstanceLifecyclePolicy
+   */
+  public function getInstanceLifecyclePolicy()
+  {
+    return $this->instanceLifecyclePolicy;
+  }
+  /**
    * @param string
    */
   public function setInstanceTemplate($instanceTemplate)
@@ -246,6 +302,20 @@ class InstanceGroupManager extends \Google\Collection
   public function getKind()
   {
     return $this->kind;
+  }
+  /**
+   * @param string
+   */
+  public function setListManagedInstancesResults($listManagedInstancesResults)
+  {
+    $this->listManagedInstancesResults = $listManagedInstancesResults;
+  }
+  /**
+   * @return string
+   */
+  public function getListManagedInstancesResults()
+  {
+    return $this->listManagedInstancesResults;
   }
   /**
    * @param string

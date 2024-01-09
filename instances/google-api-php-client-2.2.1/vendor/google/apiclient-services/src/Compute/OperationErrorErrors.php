@@ -17,12 +17,19 @@
 
 namespace Google\Service\Compute;
 
-class OperationErrorErrors extends \Google\Model
+class OperationErrorErrors extends \Google\Collection
 {
+  protected $collection_key = 'errorDetails';
   /**
    * @var string
    */
   public $code;
+  /**
+   * @var OperationErrorErrorsErrorDetails[]
+   */
+  public $errorDetails;
+  protected $errorDetailsType = OperationErrorErrorsErrorDetails::class;
+  protected $errorDetailsDataType = 'array';
   /**
    * @var string
    */
@@ -45,6 +52,20 @@ class OperationErrorErrors extends \Google\Model
   public function getCode()
   {
     return $this->code;
+  }
+  /**
+   * @param OperationErrorErrorsErrorDetails[]
+   */
+  public function setErrorDetails($errorDetails)
+  {
+    $this->errorDetails = $errorDetails;
+  }
+  /**
+   * @return OperationErrorErrorsErrorDetails[]
+   */
+  public function getErrorDetails()
+  {
+    return $this->errorDetails;
   }
   /**
    * @param string

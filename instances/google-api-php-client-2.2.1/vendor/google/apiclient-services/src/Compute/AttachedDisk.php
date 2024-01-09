@@ -21,6 +21,10 @@ class AttachedDisk extends \Google\Collection
 {
   protected $collection_key = 'licenses';
   /**
+   * @var string
+   */
+  public $architecture;
+  /**
    * @var bool
    */
   public $autoDelete;
@@ -32,18 +36,34 @@ class AttachedDisk extends \Google\Collection
    * @var string
    */
   public $deviceName;
+  /**
+   * @var CustomerEncryptionKey
+   */
+  public $diskEncryptionKey;
   protected $diskEncryptionKeyType = CustomerEncryptionKey::class;
   protected $diskEncryptionKeyDataType = '';
   /**
    * @var string
    */
   public $diskSizeGb;
+  /**
+   * @var bool
+   */
+  public $forceAttach;
+  /**
+   * @var GuestOsFeature[]
+   */
+  public $guestOsFeatures;
   protected $guestOsFeaturesType = GuestOsFeature::class;
   protected $guestOsFeaturesDataType = 'array';
   /**
    * @var int
    */
   public $index;
+  /**
+   * @var AttachedDiskInitializeParams
+   */
+  public $initializeParams;
   protected $initializeParamsType = AttachedDiskInitializeParams::class;
   protected $initializeParamsDataType = '';
   /**
@@ -62,6 +82,14 @@ class AttachedDisk extends \Google\Collection
    * @var string
    */
   public $mode;
+  /**
+   * @var string
+   */
+  public $savedState;
+  /**
+   * @var InitialStateConfig
+   */
+  public $shieldedInstanceInitialState;
   protected $shieldedInstanceInitialStateType = InitialStateConfig::class;
   protected $shieldedInstanceInitialStateDataType = '';
   /**
@@ -73,6 +101,20 @@ class AttachedDisk extends \Google\Collection
    */
   public $type;
 
+  /**
+   * @param string
+   */
+  public function setArchitecture($architecture)
+  {
+    $this->architecture = $architecture;
+  }
+  /**
+   * @return string
+   */
+  public function getArchitecture()
+  {
+    return $this->architecture;
+  }
   /**
    * @param bool
    */
@@ -142,6 +184,20 @@ class AttachedDisk extends \Google\Collection
   public function getDiskSizeGb()
   {
     return $this->diskSizeGb;
+  }
+  /**
+   * @param bool
+   */
+  public function setForceAttach($forceAttach)
+  {
+    $this->forceAttach = $forceAttach;
+  }
+  /**
+   * @return bool
+   */
+  public function getForceAttach()
+  {
+    return $this->forceAttach;
   }
   /**
    * @param GuestOsFeature[]
@@ -240,6 +296,20 @@ class AttachedDisk extends \Google\Collection
   public function getMode()
   {
     return $this->mode;
+  }
+  /**
+   * @param string
+   */
+  public function setSavedState($savedState)
+  {
+    $this->savedState = $savedState;
+  }
+  /**
+   * @return string
+   */
+  public function getSavedState()
+  {
+    return $this->savedState;
   }
   /**
    * @param InitialStateConfig

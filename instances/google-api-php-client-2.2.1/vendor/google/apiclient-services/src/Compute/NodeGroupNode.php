@@ -20,14 +20,34 @@ namespace Google\Service\Compute;
 class NodeGroupNode extends \Google\Collection
 {
   protected $collection_key = 'instances';
+  /**
+   * @var AcceleratorConfig[]
+   */
+  public $accelerators;
   protected $acceleratorsType = AcceleratorConfig::class;
   protected $acceleratorsDataType = 'array';
+  /**
+   * @var InstanceConsumptionInfo
+   */
+  public $consumedResources;
+  protected $consumedResourcesType = InstanceConsumptionInfo::class;
+  protected $consumedResourcesDataType = '';
   /**
    * @var string
    */
   public $cpuOvercommitType;
+  /**
+   * @var LocalDisk[]
+   */
+  public $disks;
   protected $disksType = LocalDisk::class;
   protected $disksDataType = 'array';
+  /**
+   * @var InstanceConsumptionData[]
+   */
+  public $instanceConsumptionData;
+  protected $instanceConsumptionDataType = InstanceConsumptionData::class;
+  protected $instanceConsumptionDataDataType = 'array';
   /**
    * @var string[]
    */
@@ -44,6 +64,10 @@ class NodeGroupNode extends \Google\Collection
    * @var bool
    */
   public $satisfiesPzs;
+  /**
+   * @var ServerBinding
+   */
+  public $serverBinding;
   protected $serverBindingType = ServerBinding::class;
   protected $serverBindingDataType = '';
   /**
@@ -54,6 +78,12 @@ class NodeGroupNode extends \Google\Collection
    * @var string
    */
   public $status;
+  /**
+   * @var InstanceConsumptionInfo
+   */
+  public $totalResources;
+  protected $totalResourcesType = InstanceConsumptionInfo::class;
+  protected $totalResourcesDataType = '';
 
   /**
    * @param AcceleratorConfig[]
@@ -68,6 +98,20 @@ class NodeGroupNode extends \Google\Collection
   public function getAccelerators()
   {
     return $this->accelerators;
+  }
+  /**
+   * @param InstanceConsumptionInfo
+   */
+  public function setConsumedResources(InstanceConsumptionInfo $consumedResources)
+  {
+    $this->consumedResources = $consumedResources;
+  }
+  /**
+   * @return InstanceConsumptionInfo
+   */
+  public function getConsumedResources()
+  {
+    return $this->consumedResources;
   }
   /**
    * @param string
@@ -96,6 +140,20 @@ class NodeGroupNode extends \Google\Collection
   public function getDisks()
   {
     return $this->disks;
+  }
+  /**
+   * @param InstanceConsumptionData[]
+   */
+  public function setInstanceConsumptionData($instanceConsumptionData)
+  {
+    $this->instanceConsumptionData = $instanceConsumptionData;
+  }
+  /**
+   * @return InstanceConsumptionData[]
+   */
+  public function getInstanceConsumptionData()
+  {
+    return $this->instanceConsumptionData;
   }
   /**
    * @param string[]
@@ -194,6 +252,20 @@ class NodeGroupNode extends \Google\Collection
   public function getStatus()
   {
     return $this->status;
+  }
+  /**
+   * @param InstanceConsumptionInfo
+   */
+  public function setTotalResources(InstanceConsumptionInfo $totalResources)
+  {
+    $this->totalResources = $totalResources;
+  }
+  /**
+   * @return InstanceConsumptionInfo
+   */
+  public function getTotalResources()
+  {
+    return $this->totalResources;
   }
 }
 

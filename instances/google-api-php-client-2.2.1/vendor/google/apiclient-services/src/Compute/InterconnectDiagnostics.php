@@ -20,8 +20,24 @@ namespace Google\Service\Compute;
 class InterconnectDiagnostics extends \Google\Collection
 {
   protected $collection_key = 'links';
+  /**
+   * @var InterconnectDiagnosticsARPEntry[]
+   */
+  public $arpCaches;
   protected $arpCachesType = InterconnectDiagnosticsARPEntry::class;
   protected $arpCachesDataType = 'array';
+  /**
+   * @var string
+   */
+  public $bundleAggregationType;
+  /**
+   * @var string
+   */
+  public $bundleOperationalStatus;
+  /**
+   * @var InterconnectDiagnosticsLinkStatus[]
+   */
+  public $links;
   protected $linksType = InterconnectDiagnosticsLinkStatus::class;
   protected $linksDataType = 'array';
   /**
@@ -42,6 +58,34 @@ class InterconnectDiagnostics extends \Google\Collection
   public function getArpCaches()
   {
     return $this->arpCaches;
+  }
+  /**
+   * @param string
+   */
+  public function setBundleAggregationType($bundleAggregationType)
+  {
+    $this->bundleAggregationType = $bundleAggregationType;
+  }
+  /**
+   * @return string
+   */
+  public function getBundleAggregationType()
+  {
+    return $this->bundleAggregationType;
+  }
+  /**
+   * @param string
+   */
+  public function setBundleOperationalStatus($bundleOperationalStatus)
+  {
+    $this->bundleOperationalStatus = $bundleOperationalStatus;
+  }
+  /**
+   * @return string
+   */
+  public function getBundleOperationalStatus()
+  {
+    return $this->bundleOperationalStatus;
   }
   /**
    * @param InterconnectDiagnosticsLinkStatus[]

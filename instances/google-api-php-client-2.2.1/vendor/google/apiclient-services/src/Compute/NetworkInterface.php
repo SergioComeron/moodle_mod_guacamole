@@ -20,8 +20,16 @@ namespace Google\Service\Compute;
 class NetworkInterface extends \Google\Collection
 {
   protected $collection_key = 'ipv6AccessConfigs';
+  /**
+   * @var AccessConfig[]
+   */
+  public $accessConfigs;
   protected $accessConfigsType = AccessConfig::class;
   protected $accessConfigsDataType = 'array';
+  /**
+   * @var AliasIpRange[]
+   */
+  public $aliasIpRanges;
   protected $aliasIpRangesType = AliasIpRange::class;
   protected $aliasIpRangesDataType = 'array';
   /**
@@ -32,6 +40,10 @@ class NetworkInterface extends \Google\Collection
    * @var int
    */
   public $internalIpv6PrefixLength;
+  /**
+   * @var AccessConfig[]
+   */
+  public $ipv6AccessConfigs;
   protected $ipv6AccessConfigsType = AccessConfig::class;
   protected $ipv6AccessConfigsDataType = 'array';
   /**
@@ -54,6 +66,10 @@ class NetworkInterface extends \Google\Collection
    * @var string
    */
   public $network;
+  /**
+   * @var string
+   */
+  public $networkAttachment;
   /**
    * @var string
    */
@@ -214,6 +230,20 @@ class NetworkInterface extends \Google\Collection
   public function getNetwork()
   {
     return $this->network;
+  }
+  /**
+   * @param string
+   */
+  public function setNetworkAttachment($networkAttachment)
+  {
+    $this->networkAttachment = $networkAttachment;
+  }
+  /**
+   * @return string
+   */
+  public function getNetworkAttachment()
+  {
+    return $this->networkAttachment;
   }
   /**
    * @param string

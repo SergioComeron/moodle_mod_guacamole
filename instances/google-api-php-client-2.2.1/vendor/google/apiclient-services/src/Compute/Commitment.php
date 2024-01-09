@@ -41,6 +41,10 @@ class Commitment extends \Google\Collection
    */
   public $endTimestamp;
   /**
+   * @var string[]
+   */
+  public $existingReservations;
+  /**
    * @var string
    */
   public $id;
@@ -48,8 +52,16 @@ class Commitment extends \Google\Collection
    * @var string
    */
   public $kind;
+  /**
+   * @var LicenseResourceCommitment
+   */
+  public $licenseResource;
   protected $licenseResourceType = LicenseResourceCommitment::class;
   protected $licenseResourceDataType = '';
+  /**
+   * @var string[]
+   */
+  public $mergeSourceCommitments;
   /**
    * @var string
    */
@@ -62,14 +74,26 @@ class Commitment extends \Google\Collection
    * @var string
    */
   public $region;
+  /**
+   * @var Reservation[]
+   */
+  public $reservations;
   protected $reservationsType = Reservation::class;
   protected $reservationsDataType = 'array';
+  /**
+   * @var ResourceCommitment[]
+   */
+  public $resources;
   protected $resourcesType = ResourceCommitment::class;
   protected $resourcesDataType = 'array';
   /**
    * @var string
    */
   public $selfLink;
+  /**
+   * @var string
+   */
+  public $splitSourceCommitment;
   /**
    * @var string
    */
@@ -158,6 +182,20 @@ class Commitment extends \Google\Collection
     return $this->endTimestamp;
   }
   /**
+   * @param string[]
+   */
+  public function setExistingReservations($existingReservations)
+  {
+    $this->existingReservations = $existingReservations;
+  }
+  /**
+   * @return string[]
+   */
+  public function getExistingReservations()
+  {
+    return $this->existingReservations;
+  }
+  /**
    * @param string
    */
   public function setId($id)
@@ -198,6 +236,20 @@ class Commitment extends \Google\Collection
   public function getLicenseResource()
   {
     return $this->licenseResource;
+  }
+  /**
+   * @param string[]
+   */
+  public function setMergeSourceCommitments($mergeSourceCommitments)
+  {
+    $this->mergeSourceCommitments = $mergeSourceCommitments;
+  }
+  /**
+   * @return string[]
+   */
+  public function getMergeSourceCommitments()
+  {
+    return $this->mergeSourceCommitments;
   }
   /**
    * @param string
@@ -282,6 +334,20 @@ class Commitment extends \Google\Collection
   public function getSelfLink()
   {
     return $this->selfLink;
+  }
+  /**
+   * @param string
+   */
+  public function setSplitSourceCommitment($splitSourceCommitment)
+  {
+    $this->splitSourceCommitment = $splitSourceCommitment;
+  }
+  /**
+   * @return string
+   */
+  public function getSplitSourceCommitment()
+  {
+    return $this->splitSourceCommitment;
   }
   /**
    * @param string

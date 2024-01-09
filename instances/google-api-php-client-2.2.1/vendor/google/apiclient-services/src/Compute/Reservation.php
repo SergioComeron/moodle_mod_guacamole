@@ -20,6 +20,12 @@ namespace Google\Service\Compute;
 class Reservation extends \Google\Model
 {
   /**
+   * @var AllocationAggregateReservation
+   */
+  public $aggregateReservation;
+  protected $aggregateReservationType = AllocationAggregateReservation::class;
+  protected $aggregateReservationDataType = '';
+  /**
    * @var string
    */
   public $commitment;
@@ -44,6 +50,16 @@ class Reservation extends \Google\Model
    */
   public $name;
   /**
+   * @var string[]
+   */
+  public $resourcePolicies;
+  /**
+   * @var AllocationResourceStatus
+   */
+  public $resourceStatus;
+  protected $resourceStatusType = AllocationResourceStatus::class;
+  protected $resourceStatusDataType = '';
+  /**
    * @var bool
    */
   public $satisfiesPzs;
@@ -51,8 +67,16 @@ class Reservation extends \Google\Model
    * @var string
    */
   public $selfLink;
+  /**
+   * @var ShareSettings
+   */
+  public $shareSettings;
   protected $shareSettingsType = ShareSettings::class;
   protected $shareSettingsDataType = '';
+  /**
+   * @var AllocationSpecificSKUReservation
+   */
+  public $specificReservation;
   protected $specificReservationType = AllocationSpecificSKUReservation::class;
   protected $specificReservationDataType = '';
   /**
@@ -68,6 +92,20 @@ class Reservation extends \Google\Model
    */
   public $zone;
 
+  /**
+   * @param AllocationAggregateReservation
+   */
+  public function setAggregateReservation(AllocationAggregateReservation $aggregateReservation)
+  {
+    $this->aggregateReservation = $aggregateReservation;
+  }
+  /**
+   * @return AllocationAggregateReservation
+   */
+  public function getAggregateReservation()
+  {
+    return $this->aggregateReservation;
+  }
   /**
    * @param string
    */
@@ -151,6 +189,34 @@ class Reservation extends \Google\Model
   public function getName()
   {
     return $this->name;
+  }
+  /**
+   * @param string[]
+   */
+  public function setResourcePolicies($resourcePolicies)
+  {
+    $this->resourcePolicies = $resourcePolicies;
+  }
+  /**
+   * @return string[]
+   */
+  public function getResourcePolicies()
+  {
+    return $this->resourcePolicies;
+  }
+  /**
+   * @param AllocationResourceStatus
+   */
+  public function setResourceStatus(AllocationResourceStatus $resourceStatus)
+  {
+    $this->resourceStatus = $resourceStatus;
+  }
+  /**
+   * @return AllocationResourceStatus
+   */
+  public function getResourceStatus()
+  {
+    return $this->resourceStatus;
   }
   /**
    * @param bool
