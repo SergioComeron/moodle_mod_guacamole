@@ -1,11 +1,16 @@
 {
     "require": {
-        "google/apiclient": "^2.12.6",
-        "php": "^7.0"
+        "google/apiclient": "^2.16.0",
+        "php": "^7.4"
+    },
+    "extra": {
+        "google/apiclient-services": [
+            "Compute"
+        ]
     },
     "config": {
         "platform": {
-            "php": "7.0"
+            "php": "7.4"
         }
     }
 }

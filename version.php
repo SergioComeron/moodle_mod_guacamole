@@ -28,7 +28,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_guacamole';
-$plugin->version = 2023093100;
+$plugin->version = 2024070102;
 $plugin->release = 'v1.4';
 $plugin->requires = 2014051203;
 $plugin->maturity = MATURITY_STABLE;
