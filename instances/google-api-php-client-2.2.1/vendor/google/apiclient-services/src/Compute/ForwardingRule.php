@@ -71,6 +71,10 @@ class ForwardingRule extends \Google\Collection
   /**
    * @var string
    */
+  public $ipCollection;
+  /**
+   * @var string
+   */
   public $ipVersion;
   /**
    * @var bool
@@ -92,10 +96,6 @@ class ForwardingRule extends \Google\Collection
    * @var string
    */
   public $loadBalancingScheme;
-  /**
-   * @var MetadataFilter[]
-   */
-  public $metadataFilters;
   protected $metadataFiltersType = MetadataFilter::class;
   protected $metadataFiltersDataType = 'array';
   /**
@@ -138,10 +138,6 @@ class ForwardingRule extends \Google\Collection
    * @var string
    */
   public $selfLink;
-  /**
-   * @var ForwardingRuleServiceDirectoryRegistration[]
-   */
-  public $serviceDirectoryRegistrations;
   protected $serviceDirectoryRegistrationsType = ForwardingRuleServiceDirectoryRegistration::class;
   protected $serviceDirectoryRegistrationsDataType = 'array';
   /**
@@ -318,6 +314,20 @@ class ForwardingRule extends \Google\Collection
   public function getId()
   {
     return $this->id;
+  }
+  /**
+   * @param string
+   */
+  public function setIpCollection($ipCollection)
+  {
+    $this->ipCollection = $ipCollection;
+  }
+  /**
+   * @return string
+   */
+  public function getIpCollection()
+  {
+    return $this->ipCollection;
   }
   /**
    * @param string

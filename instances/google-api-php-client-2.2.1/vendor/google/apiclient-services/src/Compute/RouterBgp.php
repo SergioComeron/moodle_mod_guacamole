@@ -28,16 +28,16 @@ class RouterBgp extends \Google\Collection
    * @var string[]
    */
   public $advertisedGroups;
-  /**
-   * @var RouterAdvertisedIpRange[]
-   */
-  public $advertisedIpRanges;
   protected $advertisedIpRangesType = RouterAdvertisedIpRange::class;
   protected $advertisedIpRangesDataType = 'array';
   /**
    * @var string
    */
   public $asn;
+  /**
+   * @var string
+   */
+  public $identifierRange;
   /**
    * @var string
    */
@@ -98,6 +98,20 @@ class RouterBgp extends \Google\Collection
   public function getAsn()
   {
     return $this->asn;
+  }
+  /**
+   * @param string
+   */
+  public function setIdentifierRange($identifierRange)
+  {
+    $this->identifierRange = $identifierRange;
+  }
+  /**
+   * @return string
+   */
+  public function getIdentifierRange()
+  {
+    return $this->identifierRange;
   }
   /**
    * @param string

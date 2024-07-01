@@ -20,18 +20,14 @@ namespace Google\Service\Compute;
 class RouterStatusBgpPeerStatus extends \Google\Collection
 {
   protected $collection_key = 'advertisedRoutes';
-  /**
-   * @var Route[]
-   */
-  public $advertisedRoutes;
   protected $advertisedRoutesType = Route::class;
   protected $advertisedRoutesDataType = 'array';
-  /**
-   * @var BfdStatus
-   */
-  public $bfdStatus;
   protected $bfdStatusType = BfdStatus::class;
   protected $bfdStatusDataType = '';
+  /**
+   * @var bool
+   */
+  public $enableIpv4;
   /**
    * @var bool
    */
@@ -40,6 +36,10 @@ class RouterStatusBgpPeerStatus extends \Google\Collection
    * @var string
    */
   public $ipAddress;
+  /**
+   * @var string
+   */
+  public $ipv4NexthopAddress;
   /**
    * @var string
    */
@@ -64,6 +64,10 @@ class RouterStatusBgpPeerStatus extends \Google\Collection
    * @var string
    */
   public $peerIpAddress;
+  /**
+   * @var string
+   */
+  public $peerIpv4NexthopAddress;
   /**
    * @var string
    */
@@ -124,6 +128,20 @@ class RouterStatusBgpPeerStatus extends \Google\Collection
   /**
    * @param bool
    */
+  public function setEnableIpv4($enableIpv4)
+  {
+    $this->enableIpv4 = $enableIpv4;
+  }
+  /**
+   * @return bool
+   */
+  public function getEnableIpv4()
+  {
+    return $this->enableIpv4;
+  }
+  /**
+   * @param bool
+   */
   public function setEnableIpv6($enableIpv6)
   {
     $this->enableIpv6 = $enableIpv6;
@@ -148,6 +166,20 @@ class RouterStatusBgpPeerStatus extends \Google\Collection
   public function getIpAddress()
   {
     return $this->ipAddress;
+  }
+  /**
+   * @param string
+   */
+  public function setIpv4NexthopAddress($ipv4NexthopAddress)
+  {
+    $this->ipv4NexthopAddress = $ipv4NexthopAddress;
+  }
+  /**
+   * @return string
+   */
+  public function getIpv4NexthopAddress()
+  {
+    return $this->ipv4NexthopAddress;
   }
   /**
    * @param string
@@ -232,6 +264,20 @@ class RouterStatusBgpPeerStatus extends \Google\Collection
   public function getPeerIpAddress()
   {
     return $this->peerIpAddress;
+  }
+  /**
+   * @param string
+   */
+  public function setPeerIpv4NexthopAddress($peerIpv4NexthopAddress)
+  {
+    $this->peerIpv4NexthopAddress = $peerIpv4NexthopAddress;
+  }
+  /**
+   * @return string
+   */
+  public function getPeerIpv4NexthopAddress()
+  {
+    return $this->peerIpv4NexthopAddress;
   }
   /**
    * @param string
