@@ -28,10 +28,31 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+      pgsql:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     strategy:
+      fail-fast: false
       matrix:
         php: ['8.1', '8.2']
-        moodle-branch: ['MOODLE_405_STABLE']
+        moodle-branch: ['MOODLE_403_STABLE', 'MOODLE_404_STABLE', 'MOODLE_405_STABLE']
+        db: ['mysqli', 'pgsql']
+        exclude:
+          # Moodle 4.3 requires PHP 8.0-8.2, skip nothing; 4.5 requires 8.1+, already covered.
+          # Exclude PHP 8.1 + 4.5 if needed in the future — none needed now.
+          - moodle-branch: 'MOODLE_403_STABLE'
+            php: '8.2'  # 4.3 supports 8.2 but to keep matrix size reasonable, keep one PHP per old branch
 
     steps:
       - name: Check out plugin
@@ -43,7 +64,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, xml, curl, zip, gd, intl, pdo_mysql
+          extensions: mbstring, xml, curl, zip, gd, intl, pdo_mysql, pdo_pgsql
           ini-values: max_input_vars=5000
           coverage: none
 
@@ -55,7 +76,8 @@ jobs:
         env:
           COMPOSER_NO_INTERACTION: 1
 
-      - name: Install Moodle
+      - name: Install Moodle (MySQL)
+        if: matrix.db == 'mysqli'
         run: |
           moodle-plugin-ci install \
             --plugin ./plugin \
@@ -65,6 +87,19 @@ jobs:
             --db-name=moodle
         env:
           DB: mysqli
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
+
+      - name: Install Moodle (PostgreSQL)
+        if: matrix.db == 'pgsql'
+        run: |
+          moodle-plugin-ci install \
+            --plugin ./plugin \
+            --db-host=127.0.0.1 \
+            --db-user=postgres \
+            --db-pass=postgres \
+            --db-name=moodle
+        env:
+          DB: pgsql
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
       - name: PHP Lint
