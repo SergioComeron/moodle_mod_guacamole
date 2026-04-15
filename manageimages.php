@@ -35,7 +35,7 @@ if ($courseid == SITEID) {
     $courseid = 0;
 }
 if ($courseid) {
-    $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+    $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
     $PAGE->set_course($course);
     $context = $PAGE->context;
 } else {
@@ -43,7 +43,7 @@ if ($courseid) {
     $PAGE->set_context($context);
 }
 
-$urlparams = array();
+$urlparams = [];
 $extraparams = '';
 if ($courseid) {
     $urlparams['courseid'] = $courseid;
@@ -57,7 +57,7 @@ $baseurl = new moodle_url('/mod/guacamole/manageimages.php', $urlparams);
 $PAGE->set_url($baseurl);
 
 if ($deleteimageid && confirm_sesskey()) {
-    $DB->delete_records('guacamole_images', array('id'=>$deleteimageid));
+    $DB->delete_records('guacamole_images', ['id' => $deleteimageid]);
 
     redirect($PAGE->url, get_string('imagedeleted', 'guacamole'));
 }
@@ -78,13 +78,13 @@ echo $OUTPUT->header();
 
 $table = new flexible_table('guacamole-display-images');
 
-$table->define_columns(array('images', 'actions'));
-$table->define_headers(array("Images", get_string('actions', 'moodle')));
+$table->define_columns(['images', 'actions']);
+$table->define_headers(["Images", get_string('actions', 'moodle')]);
 $table->define_baseurl($baseurl);
 
 $table->setup();
 
-foreach($images as $image) {
+foreach ($images as $image) {
     $imagename = $image->name;
 
     $imageinfo = '<div class="title">' . $imagename . '</div>';
@@ -98,7 +98,7 @@ foreach($images as $image) {
 
     $imageicons = $editaction . ' ' . $deleteaction;
 
-    $table->add_data(array($imageinfo, $imageicons));
+    $table->add_data([$imageinfo, $imageicons]);
 }
 
 $table->print_html();

@@ -37,8 +37,7 @@ require_once($CFG->dirroot . '/mod/guacamole/lib.php');
  * @covers ::getComputersUsed
  * @covers ::computerStartedByUser
  */
-class lib_test extends \advanced_testcase {
-
+final class lib_test extends \advanced_testcase {
     /**
      * @var \stdClass Course used across tests.
      */
@@ -50,6 +49,7 @@ class lib_test extends \advanced_testcase {
     private $image;
 
     protected function setUp(): void {
+        parent::setUp();
         $this->resetAfterTest();
         $this->course = $this->getDataGenerator()->create_course();
 
@@ -132,7 +132,7 @@ class lib_test extends \advanced_testcase {
             $DB->insert_record('guacamole_computers', $record);
         }
 
-        // started + loading + shutdown = 3; stopped should not count.
+        // Started + loading + shutdown = 3; stopped should not count.
         $this->assertEquals(3, getComputersUsed($this->image->id));
     }
 

@@ -31,7 +31,6 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class restore_guacamole_activity_structure_step extends restore_activity_structure_step {
-
     /**
      * Defines structure of path elements to be processed during the restore
      *
@@ -39,7 +38,7 @@ class restore_guacamole_activity_structure_step extends restore_activity_structu
      */
     protected function define_structure() {
 
-        $paths = array();
+        $paths = [];
         $paths[] = new restore_path_element('guacamole', '/activity/guacamole');
 
         // Return the paths wrapped into standard activity structure.

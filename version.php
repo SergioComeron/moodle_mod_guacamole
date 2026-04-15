@@ -33,4 +33,4 @@ $plugin->release = 'v1.5';
 $plugin->requires = 2014051203;
 $plugin->maturity = MATURITY_STABLE;
 $plugin->cron = 0;
-$plugin->dependencies = array();
+$plugin->dependencies = [];

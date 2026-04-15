@@ -28,4 +28,4 @@ $id = required_param('id', PARAM_INT);
 $itemnumber = optional_param('itemnumber', 0, PARAM_INT);
 $userid = optional_param('userid', 0, PARAM_INT);
 
-redirect('view.php?id='.$id);
+redirect('view.php?id=' . $id);

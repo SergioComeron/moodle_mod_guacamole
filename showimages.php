@@ -37,7 +37,7 @@ if ($courseid == SITEID) {
     $courseid = 0;
 }
 if ($courseid) {
-    $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+    $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
     $PAGE->set_course($course);
     $context = $PAGE->context;
 } else {
@@ -50,7 +50,7 @@ if (!$managesharedfeeds) {
     require_capability('block/rss_client:manageownfeeds', $context);
 }
 
-$urlparams = array();
+$urlparams = [];
 $extraparams = '';
 if ($courseid) {
     $urlparams['courseid'] = $courseid;
@@ -64,16 +64,16 @@ $baseurl = new moodle_url('/mod/guacamole/showimages.php', $urlparams);
 $PAGE->set_url($baseurl);
 
 if ($deletecomputerid && confirm_sesskey()) {
-  $guacamolecomputer = $DB->get_record('guacamole_computers', array('id'=>$deletecomputerid));
-  while ($guacamolecomputer->state == 'loading' || $guacamolecomputer->state == 'loading'){
-    $guacamolecomputer = $DB->get_record('guacamole_computers', array('id'=>$deletecomputerid));
-    sleep(1);
-  }
-  $guacamolecomputer->state = 'deleting';
-  $DB->update_record('guacamole_computers', $guacamolecomputer);
-  eliminarConexion($guacamolecomputer->guaidconnection);
-  stopinstance($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
-  $DB->delete_records('guacamole_computers', array('id'=>$deletecomputerid));
+    $guacamolecomputer = $DB->get_record('guacamole_computers', ['id' => $deletecomputerid]);
+    while ($guacamolecomputer->state == 'loading' || $guacamolecomputer->state == 'loading') {
+        $guacamolecomputer = $DB->get_record('guacamole_computers', ['id' => $deletecomputerid]);
+        sleep(1);
+    }
+    $guacamolecomputer->state = 'deleting';
+    $DB->update_record('guacamole_computers', $guacamolecomputer);
+    eliminarConexion($guacamolecomputer->guaidconnection);
+    stopinstance($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+    $DB->delete_records('guacamole_computers', ['id' => $deletecomputerid]);
     redirect($PAGE->url, get_string('imagedeleted', 'guacamole'));
 }
 
@@ -90,17 +90,17 @@ $PAGE->navbar->add(get_string('showimages', 'guacamole'), $showimages);
 echo $OUTPUT->header();
 
 $table = new html_table();
-$table->head = array('Nombre','Estado',get_string('actions', 'moodle'));
-$computers = $DB->get_records('guacamole_computers', array());
+$table->head = ['Nombre', 'Estado', get_string('actions', 'moodle')];
+$computers = $DB->get_records('guacamole_computers', []);
 
 foreach ($computers as $computer) {
-  $deleteurl = new moodle_url('/mod/guacamole/showimages.php?deletecomputerid=' . $computer->id . '&sesskey=' . sesskey());
-  $deleteicon = new pix_icon('t/delete', get_string('delete'));
-  $deleteaction = $OUTPUT->action_icon($deleteurl, $deleteicon, new confirm_action(get_string('deleteimageconfirm', 'guacamole')));
-  $imageicons = $deleteaction;
+    $deleteurl = new moodle_url('/mod/guacamole/showimages.php?deletecomputerid=' . $computer->id . '&sesskey=' . sesskey());
+    $deleteicon = new pix_icon('t/delete', get_string('delete'));
+    $deleteaction = $OUTPUT->action_icon($deleteurl, $deleteicon, new confirm_action(get_string('deleteimageconfirm', 'guacamole')));
+    $imageicons = $deleteaction;
 
 
-  $table->data[] = array($computer->cloudimage.'-'.$computer->imageid.'-'.$computer->userid, $computer->state, $imageicons);
+    $table->data[] = [$computer->cloudimage . '-' . $computer->imageid . '-' . $computer->userid, $computer->state, $imageicons];
 }
 echo html_writer::table($table);
 

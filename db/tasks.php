@@ -24,23 +24,23 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$tasks = array(
-    array(
+$tasks = [
+    [
         'classname' => 'mod_guacamole\task\cron_task',
         'blocking' => 0,
         'minute' => '*/1',
         'hour' => '*',
         'day' => '*',
         'month' => '*',
-        'dayofweek' => '*'
-    ),
-    array(
+        'dayofweek' => '*',
+    ],
+    [
         'classname' => 'mod_guacamole\task\cron_task_delete',
         'blocking' => 0,
         'minute' => '*/1',
         'hour' => '*',
         'day' => '*',
         'month' => '*',
-        'dayofweek' => '*'
-    )
-);
+        'dayofweek' => '*',
+    ],
+];

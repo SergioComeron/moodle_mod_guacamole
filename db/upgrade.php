@@ -69,20 +69,18 @@ function xmldb_guacamole_upgrade($oldversion) {
      * First example, some fields were added to install.xml on 2007/04/01
      */
     if ($oldversion < 2022062000) {
-
          // Define field root to be added to guacamole_computers.
          $table = new xmldb_table('guacamole_computers');
          $field = new xmldb_field('root', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'timetodelete');
- 
+
          // Conditionally launch add field root.
-         if (!$dbman->field_exists($table, $field)) {
-             $dbman->add_field($table, $field);
-         }
- 
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
          // Guacamole savepoint reached.
          upgrade_mod_savepoint(true, 2022062000, 'guacamole');
     }
-
 
     /*
      * And that's all. Please, examine and understand the 3 example blocks above. Also

@@ -21,16 +21,16 @@
  * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
 require_once("../../config.php");
 global $DB;
 
 $idimagen = optional_param('idimagen', 0, PARAM_TEXT);
-$imagen = $DB->get_record('guacamole_images', array('id'=>$idimagen));
+$imagen = $DB->get_record('guacamole_images', ['id' => $idimagen]);
 $defaultdaystodelete = $imagen->defaultdaystodelete;
 $defaultminutestoshutdown = $imagen->defaultminutestoshutdown;
 
 echo "<script>";
-echo "document.getElementById(\"id_daystodelete\").value=".$defaultdaystodelete.";";
-echo "document.getElementById(\"id_minutestoshutdown\").value=".$defaultminutestoshutdown.";";
+echo "document.getElementById(\"id_daystodelete\").value=" . $defaultdaystodelete . ";";
+echo "document.getElementById(\"id_minutestoshutdown\").value=" . $defaultminutestoshutdown . ";";
 echo "</script>";
-?>

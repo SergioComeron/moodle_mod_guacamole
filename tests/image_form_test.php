@@ -28,9 +28,9 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Tests for the guacamole_images table operations performed by editimage.php.
  */
-class image_form_test extends \advanced_testcase {
-
+final class image_form_test extends \advanced_testcase {
     protected function setUp(): void {
+        parent::setUp();
         $this->resetAfterTest();
     }
 
@@ -103,11 +103,11 @@ class image_form_test extends \advanced_testcase {
         $data->active = 0;
         $DB->insert_record('guacamole_images', $data);
 
-        $activeImages = $DB->get_records('guacamole_images', ['active' => 1]);
-        $inactiveImages = $DB->get_records('guacamole_images', ['active' => 0]);
+        $activeimages = $DB->get_records('guacamole_images', ['active' => 1]);
+        $inactiveimages = $DB->get_records('guacamole_images', ['active' => 0]);
 
-        $this->assertCount(0, $activeImages);
-        $this->assertCount(1, $inactiveImages);
+        $this->assertCount(0, $activeimages);
+        $this->assertCount(1, $inactiveimages);
     }
 
     /**

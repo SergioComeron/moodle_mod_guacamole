@@ -39,14 +39,14 @@ defined('MOODLE_INTERNAL') || die();
  *
  * @covers \mod_guacamole\task\cron_task_delete
  */
-class cron_task_test extends \advanced_testcase {
-
+final class cron_task_test extends \advanced_testcase {
     /**
      * @var \stdClass Image record.
      */
     private $image;
 
     protected function setUp(): void {
+        parent::setUp();
         $this->resetAfterTest();
 
         global $DB;
