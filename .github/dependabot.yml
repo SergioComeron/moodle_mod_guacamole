@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: "composer"
+    directory: "/instances/google-api-php-client-2.2.1"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "dev"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
