@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<ruleset name="mod_guacamole">
+    <description>PHP_CodeSniffer rules for mod_guacamole (Moodle coding style).</description>
+
+    <!-- Files and directories to check. -->
+    <file>.</file>
+
+    <!-- Exclude vendored and generated code. -->
+    <exclude-pattern>instances/google-api-php-client-2.2.1/*</exclude-pattern>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <!-- Use Moodle coding standard. -->
+    <rule ref="moodle"/>
+</ruleset>

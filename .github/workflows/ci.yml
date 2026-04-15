@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - dev
+      - master
+  pull_request:
+    branches:
+      - dev
+      - master
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: moodle
+          MYSQL_USER: moodle
+          MYSQL_PASSWORD: moodle
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    strategy:
+      matrix:
+        php: ['8.1', '8.2']
+        moodle-branch: ['MOODLE_405_STABLE']
+
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Set up PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, xml, curl, zip, gd, intl, pdo_mysql
+          coverage: none
+
+      - name: Install moodle-plugin-ci
+        run: |
+          composer global require moodlehq/moodle-plugin-ci
+          echo "$HOME/.composer/vendor/bin" >> "$GITHUB_PATH"
+
+      - name: Install Moodle
+        run: |
+          moodle-plugin-ci install \
+            --plugin ./plugin \
+            --db-host 127.0.0.1 \
+            --db-user moodle \
+            --db-pass moodle \
+            --db-name moodle \
+            --db-type mysqli \
+            --branch ${{ matrix.moodle-branch }}
+        env:
+          DB: mysqli
+
+      - name: PHP Lint
+        run: moodle-plugin-ci phplint
+        if: always()
+
+      - name: PHP CodeSniffer (Moodle standard)
+        run: moodle-plugin-ci phpcs
+        if: always()
+
+      - name: PHPUnit
+        run: moodle-plugin-ci phpunit --coverage-text
+        if: always()
