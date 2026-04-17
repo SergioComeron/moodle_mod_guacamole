@@ -22,8 +22,9 @@ jobs:
         id: version
         run: |
           VERSION=$(grep "\$plugin->release" version.php | grep -oP "'\K[^']+(?=')")
-          echo "VERSION=v${VERSION}" >> $GITHUB_OUTPUT
-          echo "Detected version: v${VERSION}"
+          [[ "$VERSION" == v* ]] || VERSION="v${VERSION}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Detected version: ${VERSION}"
 
       - name: Check if tag already exists
         id: tagcheck
