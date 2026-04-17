@@ -141,8 +141,8 @@ function guacamole_remove_instance_in_use($guacamole) {
  * @return stdClass|false The record, or false if not found.
  */
 function get_instance($id) {
-    $guacamole = $DB->get_record('guacamole', ['id' => '3']);
-    return $guacamole;
+    global $DB;
+    return $DB->get_record('guacamole', ['id' => $id]);
 }
 
 /**
