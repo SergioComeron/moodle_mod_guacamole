@@ -324,38 +324,69 @@ function guacamole_print_recent_mod_activity($activity, $courseid, $detail, $mod
 }
 
 /**
+ * Authenticates against the Guacamole API and returns an auth token.
+ *
+ * @return string The Guacamole auth token.
+ * @throws moodle_exception If authentication fails.
+ */
+function guacamole_get_token() {
+    global $CFG;
+    $ch = curl_init($CFG->guacamole_domain . '/guacamole/api/tokens');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . urlencode($CFG->guacamole_user) .
+        '&password=' . urlencode($CFG->guacamole_password));
+    $res = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode($res, true);
+    if (empty($data['authToken'])) {
+        throw new moodle_exception('guacamoleautherror', 'mod_guacamole');
+    }
+    return $data['authToken'];
+}
+
+/**
+ * Makes an authenticated request to the Guacamole REST API.
+ *
+ * @param string $token The Guacamole auth token.
+ * @param string $endpoint The API endpoint path (without domain or token).
+ * @param string $method HTTP method: GET, POST, PATCH, DELETE.
+ * @param string|null $body Request body for POST/PATCH.
+ * @param string|null $contenttype Content-Type header value.
+ * @return array Decoded JSON response.
+ */
+function guacamole_api_request($token, $endpoint, $method = 'GET', $body = null, $contenttype = null) {
+    global $CFG;
+    $url = $CFG->guacamole_domain . $endpoint . '?token=' . urlencode($token);
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    if ($method === 'DELETE') {
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+    } else if ($method === 'PATCH') {
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: ' . ($contenttype ?? 'application/json')]);
+    } else if ($method === 'POST') {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        if ($contenttype) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: ' . $contenttype]);
+        }
+    }
+    $res = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($res, true) ?? [];
+}
+
+/**
  * Checks whether the configured Guacamole user has permission on a connection.
  *
  * @param string $idconnection The Guacamole connection identifier.
+ * @param string $usuario The Guacamole username to check.
  */
-function tiene_permiso($idconnection) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    $parametros = 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/users/sergio.comeron/permissions?token=' . $tokens;
-    $ch = curl_init($urlapi);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    $var = json_decode($res, true);
-    $permisos = array_column($var, $idconnection);
-    var_dump($permisos);
+function tiene_permiso($idconnection, $usuario) {
+    $token = guacamole_get_token();
+    $data = guacamole_api_request($token, '/guacamole/api/session/data/mysql/users/' . urlencode($usuario) . '/permissions');
+    $permisos = array_column($data, $idconnection);
+    return !empty($permisos);
 }
 
 /**
@@ -365,44 +396,14 @@ function tiene_permiso($idconnection) {
  * @return int Unix timestamp of last disconnect, or 0 if never disconnected.
  */
 function fechadesconexion($instancia) {
-    global $CFG;
-    // $date = time();
-    $date = 0;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    $parametros = 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/history/connections?order=-startDate&token=' . $tokens;
-    $ch = curl_init($urlapi);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    $var = json_decode($res, true);
-    $pasa = 1;
-    $fechades = null;
-    for ($i = 0; $i < count($var); $i++) {
-        if (($var[$i]['connectionName'] == $instancia) && ($pasa == 1)) {
-            $fechades = $var[$i]['endDate'];
-            $pasa = 0;
+    $token = guacamole_get_token();
+    $history = guacamole_api_request($token, '/guacamole/api/session/data/mysql/history/connections?order=-startDate');
+    foreach ($history as $entry) {
+        if ($entry['connectionName'] === $instancia && !empty($entry['endDate'])) {
+            return (int) ($entry['endDate'] / 1000);
         }
     }
-    if ($fechades != null) {
-        $date = $fechades / 1000;
-    }
-    return $date;
+    return 0;
 }
 
 /**
@@ -412,34 +413,10 @@ function fechadesconexion($instancia) {
  * @return bool True if the connection exists, false otherwise.
  */
 function existeinstanciaguacamole($idconnection) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token=' . $tokens;
-    $ch = curl_init($urlapi);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    $var = json_decode($res, true);
-    $permisos = $var['childConnections'];
-
-    foreach ($permisos as $permiso) {
-        if (strcmp($permiso['name'], $idconnection) == true) {
+    $token = guacamole_get_token();
+    $tree = guacamole_api_request($token, '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree');
+    foreach ($tree['childConnections'] ?? [] as $conn) {
+        if ($conn['name'] === $idconnection) {
             return true;
         }
     }
@@ -453,37 +430,14 @@ function existeinstanciaguacamole($idconnection) {
  * @return string|null The Guacamole identifier, or null if not found.
  */
 function obteneridinstanciaguacamole($nombreinstancia) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token=' . $tokens;
-    $ch = curl_init($urlapi);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    $var = json_decode($res, true);
-
-    $guacamoles = $var['childConnections'];
-    foreach ($guacamoles as $guacamole) {
-        if (strcmp($guacamole['name'], $nombreinstancia) == 0) {
-            return $guacamole['identifier'];
+    $token = guacamole_get_token();
+    $tree = guacamole_api_request($token, '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree');
+    foreach ($tree['childConnections'] ?? [] as $conn) {
+        if ($conn['name'] === $nombreinstancia) {
+            return $conn['identifier'];
         }
     }
+    return null;
 }
 
 /**
@@ -494,41 +448,18 @@ function obteneridinstanciaguacamole($nombreinstancia) {
  */
 function obtainidimage($image) {
     global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token=' . $tokens;
-    $ch = curl_init($urlapi);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    $var = json_decode($res, true);
-    $guacamoles = $var['childConnectionGroups'];
-    // $resul=0;
-    foreach ($guacamoles as $guacamole) {
-        if (strcmp($guacamole['name'], $CFG->guacamole_template_group) == 0) {
-            $guacamoletemplate = $guacamole['childConnections'];
-            foreach ($guacamoletemplate as $guacamoleimagen) {
-                if (strcasecmp($guacamoleimagen['name'], $image) == 0) {
-                    return $guacamoleimagen['identifier'];
+    $token = guacamole_get_token();
+    $tree = guacamole_api_request($token, '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree');
+    foreach ($tree['childConnectionGroups'] ?? [] as $group) {
+        if ($group['name'] === $CFG->guacamole_template_group) {
+            foreach ($group['childConnections'] ?? [] as $conn) {
+                if (strcasecmp($conn['name'], $image) === 0) {
+                    return $conn['identifier'];
                 }
             }
         }
     }
+    return null;
 }
 
 /**
@@ -538,40 +469,14 @@ function obtainidimage($image) {
  */
 function obtenerlaboratorios() {
     global $CFG;
-    $opciones = [];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token=' . $tokens;
-    $ch = curl_init($urlapi);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    $var = json_decode($res, true);
-    $guacamoles = $var['childConnectionGroups'];
-
-    foreach ($guacamoles as $guacamole) {
-        if (strcmp($guacamole['name'], $CFG->guacamole_template_group) == 0) {
-            $instancias = $guacamole['childConnections'];
-            foreach ($instancias as $instancia) {
-                array_push($opciones, $instancia['name']);
-            }
-            return $opciones;
+    $token = guacamole_get_token();
+    $tree = guacamole_api_request($token, '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree');
+    foreach ($tree['childConnectionGroups'] ?? [] as $group) {
+        if ($group['name'] === $CFG->guacamole_template_group) {
+            return array_column($group['childConnections'] ?? [], 'name');
         }
     }
+    return [];
 }
 
 /**
@@ -602,38 +507,18 @@ function getcomputersused($image) {
  */
 function obtenerlaboratoriosname() {
     global $CFG;
-    $opciones = [];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree?token=' . $tokens;
-    $ch = curl_init($urlapi);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    $var = json_decode($res, true);
-    $guacamoles = $var['childConnectionGroups'];
-    foreach ($guacamoles as $guacamole) {
-        if (strcmp($guacamole['name'], $CFG->guacamole_template_group) == 0) {
-            $instancias = $guacamole['childConnections'];
-            foreach ($instancias as $instancia) {
-                // $opciones[$instancia['name']] = strtolower($instancia['name']);
-                $opciones[$instancia['identifier']] = strtolower($instancia['name']);
+    $token = guacamole_get_token();
+    $tree = guacamole_api_request($token, '/guacamole/api/session/data/mysql/connectionGroups/ROOT/tree');
+    foreach ($tree['childConnectionGroups'] ?? [] as $group) {
+        if ($group['name'] === $CFG->guacamole_template_group) {
+            $opciones = [];
+            foreach ($group['childConnections'] ?? [] as $conn) {
+                $opciones[$conn['identifier']] = strtolower($conn['name']);
             }
             return $opciones;
         }
     }
+    return [];
 }
 
 /**
@@ -645,47 +530,26 @@ function obtenerlaboratoriosname() {
  * @return string The new Guacamole connection identifier.
  */
 function crearconexion($imageid, $userid, $compname) {
-    global $CFG, $DB;
+    global $DB;
     $image = $DB->get_record('guacamole_images', ['id' => $imageid]);
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connections?token=' . $tokens;
-    $ch = curl_init($urlapi);
+    $token = guacamole_get_token();
 
     $originalparameters = getinstanceparameters($image->guaidconnection);
-
     $originalinfo = getinfoinstance($image->guaidconnection);
     unset($originalinfo['identifier']);
-    // $computername = $image->cloudimage.'-'.$image->id.'-'.$userid;
-    $computername = $compname;
-    $originalinfo['name'] = $computername;
-    $originalinfo['parentIdentifier'] = "ROOT";
-    $originalparameters['hostname'] = $computername;
+    $originalinfo['name'] = $compname;
+    $originalinfo['parentIdentifier'] = 'ROOT';
+    $originalparameters['hostname'] = $compname;
     $originalinfo['parameters'] = $originalparameters;
 
-    $parameters = json_encode($originalinfo);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $parameters);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    return $var['identifier'];
+    $result = guacamole_api_request(
+        $token,
+        '/guacamole/api/session/data/mysql/connections',
+        'POST',
+        json_encode($originalinfo),
+        'application/json'
+    );
+    return $result['identifier'];
 }
 
 /**
@@ -695,29 +559,8 @@ function crearconexion($imageid, $userid, $compname) {
  * @return array The connection parameters as an associative array.
  */
 function getinstanceparameters($instance) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connections/' . $instance . '/parameters?token=' . $tokens;
-
-    $ch = curl_init($urlapi);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    // echo $urlapi;
-    return json_decode($res, true);
+    $token = guacamole_get_token();
+    return guacamole_api_request($token, '/guacamole/api/session/data/mysql/connections/' . $instance . '/parameters');
 }
 
 /**
@@ -727,31 +570,8 @@ function getinstanceparameters($instance) {
  * @return array The connection info as an associative array.
  */
 function getinfoinstance($instance) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connections/' . $instance . '?token=' . $tokens;
-
-    $ch = curl_init($urlapi);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    $res = curl_exec($ch);
-    curl_close($ch);
-
-    return json_decode($res, true);
+    $token = guacamole_get_token();
+    return guacamole_api_request($token, '/guacamole/api/session/data/mysql/connections/' . $instance);
 }
 
 /**
@@ -760,30 +580,8 @@ function getinfoinstance($instance) {
  * @param string $instance The Guacamole connection identifier to delete.
  */
 function eliminarconexion($instance) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/connections/' . $instance . '?token=' . $tokens;
-    $ch = curl_init($urlapi);
-
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-
-    $res = curl_exec($ch);
-    curl_close($ch);
+    $token = guacamole_get_token();
+    guacamole_api_request($token, '/guacamole/api/session/data/mysql/connections/' . $instance, 'DELETE');
 }
 
 /**
@@ -793,34 +591,9 @@ function eliminarconexion($instance) {
  * @param string $user The Guacamole username.
  */
 function darpermiso($instance, $user) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . "/guacamole/api/session/data/mysql/users/" . $user . "/permissions?token=" . $tokens;
-    $ch = curl_init($urlapi);
-
-    $parametros = '[{"op":"add","path":"/connectionPermissions/' . $instance . '","value":"READ"}]';
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $parametros);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
+    $token = guacamole_get_token();
+    $body = '[{"op":"add","path":"/connectionPermissions/' . $instance . '","value":"READ"}]';
+    guacamole_api_request($token, '/guacamole/api/session/data/mysql/users/' . urlencode($user) . '/permissions', 'PATCH', $body);
 }
 
 /**
@@ -830,33 +603,9 @@ function darpermiso($instance, $user) {
  * @param string $user The Guacamole username.
  */
 function quitarpermiso($instance, $user) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/users/' . $user . '/permissions?token=' . $tokens;
-    $ch = curl_init($urlapi);
-    $parametros = '[{"op":"remove","path":"/connectionPermissions/' . $instance . '","value":"READ"}]';
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $parametros);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
+    $token = guacamole_get_token();
+    $body = '[{"op":"remove","path":"/connectionPermissions/' . $instance . '","value":"READ"}]';
+    guacamole_api_request($token, '/guacamole/api/session/data/mysql/users/' . urlencode($user) . '/permissions', 'PATCH', $body);
 }
 
 /**
@@ -865,40 +614,19 @@ function quitarpermiso($instance, $user) {
  * @param string $user The username to create in Guacamole.
  */
 function crearusuario($user) {
-    global $CFG;
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/tokens';
-    $ch = curl_init($urlapi);
-    $nombredeusuario = $CFG->guacamole_user;
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
-
-    $tokens = $var['authToken'];
-
-    $urlapi = $CFG->guacamole_domain . '/guacamole/api/session/data/mysql/users?token=' . $tokens;
-    $ch = curl_init($urlapi);
-    $parametros = '{"username":"' . $user . '","attributes":{
-      "disabled":"",
-      "expired":"",
-      "access-window-start":"",
-      "valid-from":"",
-      "valid-until":"",
-      "timezone":""
-    }}';
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $parametros);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
-
-    $res = curl_exec($ch);
-    $var = json_decode($res, true);
-    curl_close($ch);
+    $token = guacamole_get_token();
+    $body = json_encode([
+        'username' => $user,
+        'attributes' => [
+            'disabled' => '',
+            'expired' => '',
+            'access-window-start' => '',
+            'valid-from' => '',
+            'valid-until' => '',
+            'timezone' => '',
+        ],
+    ]);
+    guacamole_api_request($token, '/guacamole/api/session/data/mysql/users', 'POST', $body, 'application/json');
 }
 
 /**
