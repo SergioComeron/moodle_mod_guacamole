@@ -37,16 +37,22 @@ defined('MOODLE_INTERNAL') || die();
  *}
  */
 
- function guacamole_update_calendar(stdClass $guacamole, $cmid) {
+/**
+ * Creates or updates a calendar event linked to the guacamole activity.
+ *
+ * @param stdClass $guacamole The guacamole instance record.
+ * @param int $cmid The course-module ID.
+ */
+function guacamole_update_calendar(stdClass $guacamole, $cmid) {
     global $DB, $CFG;
 
-    require_once($CFG->dirroot.'/calendar/lib.php');
+    require_once($CFG->dirroot . '/calendar/lib.php');
 
     $event = new stdClass();
     $event->eventtype = 'open';
     $event->type = CALENDAR_EVENT_TYPE_STANDARD;
 
-    if ($event->id = $DB->get_field('event', 'id', array('modulename' => 'guacamole', 'instance' => $guacamole->id, 'eventtype' => $event->eventtype))) {
+    if ($event->id = $DB->get_field('event', 'id', ['modulename' => 'guacamole', 'instance' => $guacamole->id, 'eventtype' => $event->eventtype])) {
         if ((!empty($guacamole->timeopen)) && ($guacamole->timeopen > 0)) {
             $event->name = get_string('calendarstart', 'guacamole', $guacamole->name);
             $event->timestart = $guacamole->timeopen;
@@ -60,8 +66,7 @@ defined('MOODLE_INTERNAL') || die();
             $calendarevent = calendar_event::load($event->id);
             $calendarevent->delete();
         }
-
-    }else{
+    } else {
         if ((!empty($guacamole->timeopen)) && ($guacamole->timeopen > 0)) {
             $event->name = get_string('calendarstart', 'guacamole', $guacamole->name);
             $event->courseid = $guacamole->course;
@@ -78,4 +83,4 @@ defined('MOODLE_INTERNAL') || die();
         }
     }
     return true;
- }
+}

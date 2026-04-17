@@ -35,7 +35,6 @@ require_once($CFG->dirroot . '/mod/guacamole/backup/moodle2/backup_guacamole_ste
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class backup_guacamole_activity_task extends backup_activity_task {
-
     /**
      * No specific settings for this activity
      */
@@ -55,17 +54,17 @@ class backup_guacamole_activity_task extends backup_activity_task {
      * @param string $content some HTML text that eventually contains URLs to the activity instance scripts
      * @return string the content with the URLs encoded
      */
-    static public function encode_content_links($content) {
+    public static function encode_content_links($content) {
         global $CFG;
 
         $base = preg_quote($CFG->wwwroot, '/');
 
         // Link to the list of newmodules.
-        $search = '/('.$base.'\/mod\/guacamole\/index.php\?id\=)([0-9]+)/';
+        $search = '/(' . $base . '\/mod\/guacamole\/index.php\?id\=)([0-9]+)/';
         $content = preg_replace($search, '$@GUACAMOLEINDEX*$2@$', $content);
 
         // Link to guacamole view by moduleid.
-        $search = '/('.$base.'\/mod\/guacamole\/view.php\?id\=)([0-9]+)/';
+        $search = '/(' . $base . '\/mod\/guacamole\/view.php\?id\=)([0-9]+)/';
         $content = preg_replace($search, '$@GUACAMOLEVIEWBYID*$2@$', $content);
 
         return $content;

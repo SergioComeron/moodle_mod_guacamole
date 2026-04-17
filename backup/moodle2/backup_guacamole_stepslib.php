@@ -33,7 +33,6 @@ defined('MOODLE_INTERNAL') || die;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class backup_guacamole_activity_structure_step extends backup_activity_structure_step {
-
     /**
      * Defines the backup structure of the module
      *
@@ -46,13 +45,13 @@ class backup_guacamole_activity_structure_step extends backup_activity_structure
 
         // Define the root element describing the guacamole instance.
 
-        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>!!HE METIDO TIMEOPEN POR LO DE LA PAPELERA DE RECICLAJE
-        $guacamole = new backup_nested_element('guacamole', array('id'), array('name', 'imageid', 'minutestoshutdown', 'daystodelete', 'intro', 'grade'));
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>!!HE METIDO TIMEOPEN POR LO DE LA PAPELERA DE RECICLAJE
+        $guacamole = new backup_nested_element('guacamole', ['id'], ['name', 'imageid', 'minutestoshutdown', 'daystodelete', 'intro', 'grade']);
 
         // If we had more elements, we would build the tree here.
 
         // Define data sources.
-        $guacamole->set_source_table('guacamole', array('id' => backup::VAR_ACTIVITYID));
+        $guacamole->set_source_table('guacamole', ['id' => backup::VAR_ACTIVITYID]);
 
         // If we were referring to other tables, we would annotate the relation
         // with the element's annotate_ids() method.
