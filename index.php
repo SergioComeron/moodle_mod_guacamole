@@ -27,23 +27,23 @@
 
 // Replace guacamole with the name of your module and remove this line.
 
-require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
-require_once(dirname(__FILE__).'/lib.php');
+require_once(dirname(dirname(dirname(__FILE__))) . '/config.php');
+require_once(dirname(__FILE__) . '/lib.php');
 
 $id = required_param('id', PARAM_INT);   // Course.
 
-$PAGE->set_url('/mod/guacamole/index.php', array('id' => $id));
+$PAGE->set_url('/mod/guacamole/index.php', ['id' => $id]);
 
-if (! $course = $DB->get_record('course', array('id' => $id))) {
+if (! $course = $DB->get_record('course', ['id' => $id])) {
     throw new \moodle_exception('invalidcourseid');
 }
 
 require_course_login($course);
 $PAGE->set_pagelayout('incourse');
 
-$params = array(
-    'context' => context_course::instance($id)
-);
+$params = [
+    'context' => context_course::instance($id),
+];
 $event = \mod_guacamole\event\course_module_instance_list_viewed::create($params);
 $event->add_record_snapshot('course', $course);
 $event->trigger();
@@ -75,22 +75,22 @@ $strname  = get_string('name');
 $table = new html_table();
 
 if ($usesections) {
-    $strsectionname = get_string('sectionname', 'format_'.$course->format);
-    $table->head  = array ($strsectionname, $strname);
-    $table->align = array ('center', 'left');
+    $strsectionname = get_string('sectionname', 'format_' . $course->format);
+    $table->head  = [$strsectionname, $strname];
+    $table->align = ['center', 'left'];
 } else {
-    $table->head  = array ($strname);
-    $table->align = array ('left');
+    $table->head  = [$strname];
+    $table->align = ['left'];
 }
 
 $currentsection = '';
 foreach ($guacamoles as $guacamole) {
     if (!$guacamole->visible) {
         // Show dimmed if the mod is hidden.
-        $link = "<a class=\"dimmed\" href=\"view.php?id=$guacamole->coursemodule\">".format_string($guacamole->name, true)."</a>";
+        $link = "<a class=\"dimmed\" href=\"view.php?id=$guacamole->coursemodule\">" . format_string($guacamole->name, true) . "</a>";
     } else {
         // Show normal if the mod is visible.
-        $link = "<a href=\"view.php?id=$guacamole->coursemodule\">".format_string($guacamole->name, true)."</a>";
+        $link = "<a href=\"view.php?id=$guacamole->coursemodule\">" . format_string($guacamole->name, true) . "</a>";
     }
     $printsection = '';
     if ($guacamole->section !== $currentsection) {
@@ -103,9 +103,9 @@ foreach ($guacamoles as $guacamole) {
         $currentsection = $guacamole->section;
     }
     if ($usesections) {
-        $table->data[] = array ($printsection, $link);
+        $table->data[] = [$printsection, $link];
     } else {
-        $table->data[] = array ($link);
+        $table->data[] = [$link];
     }
 }
 
@@ -116,4 +116,3 @@ echo html_writer::table($table);
 // Finish the page.
 
 echo $OUTPUT->footer();
-

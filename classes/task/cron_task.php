@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 /**
  * A scheduled task for guacamole cron.
  *
@@ -24,12 +23,19 @@
  */
 namespace mod_guacamole\task;
 
-require_once(dirname(dirname(dirname(__FILE__))).'/instances/lib.php');
-require_once(dirname(dirname(dirname(__FILE__))).'/lib.php');
+defined('MOODLE_INTERNAL') || die();
 
+require_once(dirname(dirname(dirname(__FILE__))) . '/instances/lib.php');
+require_once(dirname(dirname(dirname(__FILE__))) . '/lib.php');
 
+/**
+ * Scheduled task to shut down virtual machines that have been idle beyond their allowed time.
+ *
+ * @package    mod_guacamole
+ * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class cron_task extends \core\task\scheduled_task {
-
     /**
      * Get a descriptive name for this task (shown to admins).
      *
@@ -39,108 +45,103 @@ class cron_task extends \core\task\scheduled_task {
         return get_string('crontask', 'guacamole');
     }
 
+    /**
+     * Run guacamole shutdown cron.
+     */
     public function execute() {
         global $CFG, $DB;
 
-        $ch = curl_init($CFG->guacamole_domain."/guacamole/api/tokens");
-        $nombreDeUsuario=$CFG->guacamole_user;
-        $parametros='username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password;
+        $ch = curl_init($CFG->guacamole_domain . "/guacamole/api/tokens");
+        $nombredeusuario = $CFG->guacamole_user;
+        $parametros = 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password;
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, 'username='.$nombreDeUsuario.'&password='.$CFG->guacamole_password);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
 
         $res = curl_exec($ch);
         $var = json_decode($res, true);
         curl_close($ch);
 
-        $tokens=$var['authToken'];
+        $tokens = $var['authToken'];
 
-        $ch = curl_init($CFG->guacamole_domain."/guacamole/api/session/data/mysql/activeConnections?token=".$tokens);
+        $ch = curl_init($CFG->guacamole_domain . "/guacamole/api/session/data/mysql/activeConnections?token=" . $tokens);
 
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-        $res=curl_exec($ch);
+        $res = curl_exec($ch);
         curl_close($ch);
 
         $var = json_decode($res, true);
         $users = array_column($var, 'username');
         $connections = array_column($var, 'connectionIdentifier');
 
-        $guacamolecomputers = $DB->get_records('guacamole_computers', array('state'=>'started', 'root'=>$CFG->wwwroot));
-        foreach ($guacamolecomputers as $guacamolecomputer){
-            echo ($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
+        $guacamolecomputers = $DB->get_records('guacamole_computers', ['state' => 'started', 'root' => $CFG->wwwroot]);
+        foreach ($guacamolecomputers as $guacamolecomputer) {
+            echo ($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
             $timelaststart = $guacamolecomputer->timelaststart;
             $timedesconection = 0;
-            $timedesconection = fechaDesconexion($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
-            $timetostop = $timedesconection+$guacamolecomputer->minutestoshutdown*60;
+            $timedesconection = fechaDesconexion($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+            $timetostop = $timedesconection + $guacamolecomputer->minutestoshutdown * 60;
             $today = time();
-            $guacamolecomputer->timetodelete = $today + ($guacamolecomputer->daystodelete*60*60*24);
+            $guacamolecomputer->timetodelete = $today + ($guacamolecomputer->daystodelete * 60 * 60 * 24);
             $DB->update_record('guacamole_computers', $guacamolecomputer);
-            if (!in_array($guacamolecomputer->guaidconnection, $connections)){
-              if ($timedesconection<$timelaststart){
-                $timetostop = $timelaststart+$guacamolecomputer->minutestoshutdown*60+120;
-                $today = time();
-                if ($timetostop<$today){
-                  $guacamolecomputer->state = 'shutdown';
-                  $DB->update_record('guacamole_computers', $guacamolecomputer);
-                  $user=$DB->get_record('user', array('id'=>$guacamolecomputer->userid));
-                  quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
-                  eliminarConexion($guacamolecomputer->guaidconnection);
-
-                  stopvm($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
-                  $guacamolecomputer->guaidconnection=null;
-                  $guacamolecomputer->state='stopped';
-                  $guacamolecomputer->timelaststop=$today;
-                  $DB->update_record('guacamole_computers', $guacamolecomputer);
-                  echo "....parada";
-                }else{
-
-                }
-              }else{
-                if ($timetostop<$today){
-                  $guacamolecomputer->state = 'shutdown';
-                  $DB->update_record('guacamole_computers', $guacamolecomputer);
-                  $user=$DB->get_record('user', array('id'=>$guacamolecomputer->userid));
-                  quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
-                  eliminarConexion($guacamolecomputer->guaidconnection);
-
-                  stopvm($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
-                  $guacamolecomputer->guaidconnection=null;
-                  $guacamolecomputer->state='stopped';
-                  $guacamolecomputer->timelaststop=$today;
-                  $DB->update_record('guacamole_computers', $guacamolecomputer);
-                  echo "....parada";
-                }else{
-                  if ($timedesconection==0){
-                    $timetostop = $timelaststart+$guacamolecomputer->minutestoshutdown*60+120;
+            if (!in_array($guacamolecomputer->guaidconnection, $connections)) {
+                if ($timedesconection < $timelaststart) {
+                    $timetostop = $timelaststart + $guacamolecomputer->minutestoshutdown * 60 + 120;
                     $today = time();
+                    if ($timetostop < $today) {
+                        $guacamolecomputer->state = 'shutdown';
+                        $DB->update_record('guacamole_computers', $guacamolecomputer);
+                        $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
+                        quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
+                        eliminarConexion($guacamolecomputer->guaidconnection);
 
-                    if ($timetostop<$today){
-                      $guacamolecomputer->state = 'shutdown';
-                      $DB->update_record('guacamole_computers', $guacamolecomputer);
-                      $user=$DB->get_record('user', array('id'=>$guacamolecomputer->userid));
-                      quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
-                      eliminarConexion($guacamolecomputer->guaidconnection);
-
-                      stopvm($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
-                      $guacamolecomputer->guaidconnection=null;
-                      $guacamolecomputer->state='stopped';
-                      $guacamolecomputer->timelaststop=$today;
-                      $DB->update_record('guacamole_computers', $guacamolecomputer);
-                      echo "....parada";
-                    }else{
-
+                        stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                        $guacamolecomputer->guaidconnection = null;
+                        $guacamolecomputer->state = 'stopped';
+                        $guacamolecomputer->timelaststop = $today;
+                        $DB->update_record('guacamole_computers', $guacamolecomputer);
+                        echo "....parada";
                     }
+                } else {
+                    if ($timetostop < $today) {
+                        $guacamolecomputer->state = 'shutdown';
+                        $DB->update_record('guacamole_computers', $guacamolecomputer);
+                        $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
+                        quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
+                        eliminarConexion($guacamolecomputer->guaidconnection);
 
-                  }
+                        stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                        $guacamolecomputer->guaidconnection = null;
+                        $guacamolecomputer->state = 'stopped';
+                        $guacamolecomputer->timelaststop = $today;
+                        $DB->update_record('guacamole_computers', $guacamolecomputer);
+                        echo "....parada";
+                    } else {
+                        if ($timedesconection == 0) {
+                            $timetostop = $timelaststart + $guacamolecomputer->minutestoshutdown * 60 + 120;
+                            $today = time();
+
+                            if ($timetostop < $today) {
+                                $guacamolecomputer->state = 'shutdown';
+                                $DB->update_record('guacamole_computers', $guacamolecomputer);
+                                $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
+                                quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
+                                eliminarConexion($guacamolecomputer->guaidconnection);
+
+                                stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                                $guacamolecomputer->guaidconnection = null;
+                                $guacamolecomputer->state = 'stopped';
+                                $guacamolecomputer->timelaststop = $today;
+                                $DB->update_record('guacamole_computers', $guacamolecomputer);
+                                echo "....parada";
+                            }
+                        }
+                    }
                 }
-              }
-
-            }else{
-
             }
         }
     }

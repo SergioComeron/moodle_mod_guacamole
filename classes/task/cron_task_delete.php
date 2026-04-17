@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 /**
  * A scheduled task for guacamole cron.
  *
@@ -24,11 +23,19 @@
  */
 namespace mod_guacamole\task;
 
-require_once(dirname(dirname(dirname(__FILE__))).'/instances/lib.php');
-require_once(dirname(dirname(dirname(__FILE__))).'/lib.php');
+defined('MOODLE_INTERNAL') || die();
 
+require_once(dirname(dirname(dirname(__FILE__))) . '/instances/lib.php');
+require_once(dirname(dirname(dirname(__FILE__))) . '/lib.php');
+
+/**
+ * Scheduled task to delete stopped virtual machines whose time-to-delete has passed.
+ *
+ * @package    mod_guacamole
+ * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class cron_task_delete extends \core\task\scheduled_task {
-
     /**
      * Get a descriptive name for this task (shown to admins).
      *
@@ -44,20 +51,20 @@ class cron_task_delete extends \core\task\scheduled_task {
     public function execute() {
         global $CFG, $DB;
 
-        $guacamolecomputers = $DB->get_records('guacamole_computers', array('state'=>'stopped', 'root'=>$CFG->wwwroot));
+        $guacamolecomputers = $DB->get_records('guacamole_computers', ['state' => 'stopped', 'root' => $CFG->wwwroot]);
 
-        foreach ($guacamolecomputers as $guacamolecomputer){
-          echo $guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid;
-          if ($guacamolecomputer->timetodelete<time()){
-            $guacamolecomputer->state = 'deleting';
-            $DB->update_record('guacamole_computers', $guacamolecomputer);
-            echo "....eliminada";
-            stopinstance($guacamolecomputer->cloudimage.'-'.$guacamolecomputer->imageid.'-'.$guacamolecomputer->userid);
-            $DB->delete_records('guacamole_computers', array('imageid' => $guacamolecomputer->imageid, 'userid' => $guacamolecomputer->userid));
-          }else{
-            echo "....no eliminada";
-          }
-          echo "<br>";
+        foreach ($guacamolecomputers as $guacamolecomputer) {
+            echo $guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid;
+            if ($guacamolecomputer->timetodelete < time()) {
+                $guacamolecomputer->state = 'deleting';
+                $DB->update_record('guacamole_computers', $guacamolecomputer);
+                echo "....eliminada";
+                stopinstance($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                $DB->delete_records('guacamole_computers', ['imageid' => $guacamolecomputer->imageid, 'userid' => $guacamolecomputer->userid]);
+            } else {
+                echo "....no eliminada";
+            }
+            echo "<br>";
         }
     }
 }

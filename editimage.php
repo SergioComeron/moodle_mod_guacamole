@@ -25,22 +25,43 @@
 
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/formslib.php');
-require_once($CFG->libdir .'/simplepie/moodle_simplepie.php');
-require_once($CFG->dirroot.'/mod/guacamole/lib.php');
+require_once($CFG->libdir . '/simplepie/moodle_simplepie.php');
+require_once($CFG->dirroot . '/mod/guacamole/lib.php');
 
+/**
+ * Form for adding or editing a guacamole image record.
+ *
+ * @package    mod_guacamole
+ * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class image_edit_form extends moodleform {
+    /** @var bool Whether a new image is being added. */
     protected $isadding;
+    /** @var bool Whether the user can edit shared images. */
     protected $caneditshared;
+    /** @var string Image title. */
     protected $title = '';
+    /** @var string Image description. */
     protected $description = '';
 
-    function __construct($actionurl, $isadding, $caneditshared) {
+    /**
+     * Constructor.
+     *
+     * @param string $actionurl Form action URL.
+     * @param bool $isadding True when adding a new image.
+     * @param bool $caneditshared True when the user can edit shared images.
+     */
+    public function __construct($actionurl, $isadding, $caneditshared) {
         $this->isadding = $isadding;
         $this->caneditshared = $caneditshared;
         parent::__construct($actionurl);
     }
 
-    function definition() {
+    /**
+     * Defines the form fields.
+     */
+    public function definition() {
         global $CFG;
 
         $mform =& $this->_form;
@@ -48,14 +69,11 @@ class image_edit_form extends moodleform {
         $mform->addElement('header', 'guacamoleeditimageheader', get_string('image', 'guacamole'));
         $mform->addElement('text', 'name', get_string('imagename', 'guacamole'));
         $mform->setType('name', PARAM_RAW);
-        $opciones=obtenerLaboratoriosName();
+        $opciones = obtenerLaboratoriosName();
         $mform->addElement('select', 'guaidconnection', get_string('guacamoleinstance', 'guacamole'), $opciones);
         $mform->addElement('advcheckbox', 'active', get_string('active', 'guacamole'));
         $mform->addElement('text', 'cloudimage', get_string('guacamoleimagename', 'guacamole'));
         $mform->setType('cloudimage', PARAM_RAW);
-      //  if (!$this->isadding){
-      //    $mform->disabledIf('cloudimage', null);
-      //  }
         $mform->addElement('text', 'maxnuminstances', get_string('numberofinstances', 'guacamole'), 'size="2"');
         $mform->setDefault('maxnuminstances', $CFG->guacamole_default_max_connections);
         $mform->setType('maxnuminstances', PARAM_INT);
@@ -73,15 +91,20 @@ class image_edit_form extends moodleform {
         $this->add_action_buttons(true, $submitlabal);
     }
 
-    function get_data() {
+    /**
+     * Returns submitted form data after applying any extra transformations.
+     *
+     * @return \stdClass|null Form data, or null if the form was not submitted.
+     */
+    public function get_data() {
         $data = parent::get_data();
         if ($data) {
             $data->title = '';
             $data->description = '';
-            if($this->title){
+            if ($this->title) {
                 $data->title = $this->title;
             }
-            if($this->description){
+            if ($this->description) {
                 $data->description = $this->description;
             }
         }
@@ -97,7 +120,7 @@ if ($courseid == SITEID) {
     $courseid = 0;
 }
 if ($courseid) {
-    $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+    $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
     $PAGE->set_course($course);
     $context = $PAGE->context;
 } else {
@@ -105,7 +128,7 @@ if ($courseid) {
     $PAGE->set_context($context);
 }
 
-$urlparams = array('imageid' => $imageid);
+$urlparams = ['imageid' => $imageid];
 if ($courseid) {
     $urlparams['courseid'] = $courseid;
 }
@@ -119,10 +142,10 @@ $PAGE->set_pagelayout('admin');
 
 if ($imageid) {
     $isadding = false;
-    $imagerecord = $DB->get_record('guacamole_images', array('id' => $imageid), '*', MUST_EXIST);
+    $imagerecord = $DB->get_record('guacamole_images', ['id' => $imageid], '*', MUST_EXIST);
 } else {
     $isadding = true;
-    $imagerecord = new stdClass;
+    $imagerecord = new stdClass();
 }
 $manageimagescap = has_capability('mod/guacamole:manageimages', $context);
 
@@ -131,7 +154,6 @@ $mform->set_data($imagerecord);
 
 if ($mform->is_cancelled()) {
     redirect($manageimages);
-
 } else if ($data = $mform->get_data()) {
     if (!$manageimagescap) {
         $data->shared = 0;
@@ -145,7 +167,6 @@ if ($mform->is_cancelled()) {
     }
 
     redirect($manageimages);
-
 } else {
     if ($isadding) {
         $strtitle = get_string('addnewimage', 'guacamole');
@@ -158,7 +179,7 @@ if ($mform->is_cancelled()) {
 
     $PAGE->navbar->add(get_string('mod', 'guacamole'));
     $PAGE->navbar->add(get_string('pluginname', 'guacamole'));
-    $PAGE->navbar->add(get_string('manageimages', 'guacamole'), './manageimages.php' );
+    $PAGE->navbar->add(get_string('manageimages', 'guacamole'), './manageimages.php');
     $PAGE->navbar->add($strtitle);
 
     echo $OUTPUT->header();

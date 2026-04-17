@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<libraries>
+    <library>
+        <location>instances/google-api-php-client-2.2.1</location>
+        <name>Google API PHP Client</name>
+        <version>2.2.1</version>
+        <license>Apache-2.0</license>
+        <licenseversion>2.0</licenseversion>
+    </library>
+</libraries>

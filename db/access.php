@@ -47,55 +47,55 @@
 defined('MOODLE_INTERNAL') || die();
 
 // Modify capabilities as needed and remove this comment.
-$capabilities = array(
-    'mod/guacamole:addinstance' => array(
+$capabilities = [
+    'mod/guacamole:addinstance' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
-        'archetypes' => array(
+        'archetypes' => [
             'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        ),
-        'clonepermissionsfrom' => 'moodle/course:manageactivities'
-    ),
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'moodle/course:manageactivities',
+    ],
 
-    'mod/guacamole:view' => array(
+    'mod/guacamole:view' => [
         'captype' => 'read',
         'contextlevel' => CONTEXT_MODULE,
-        'archetypes' => array(
+        'archetypes' => [
             'guest' => CAP_ALLOW,
             'user' => CAP_ALLOW,
-        )
-    ),
+        ],
+    ],
 
-    'mod/guacamole:manageimages' => array(
+    'mod/guacamole:manageimages' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
-        'archetypes' => array(
+        'archetypes' => [
             'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        ),
-        'clonepermissionsfrom' => 'moodle/course:manageactivities'
-    ),
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'moodle/course:manageactivities',
+    ],
 
-    'mod/guacamole:configtimetoshutdown' => array(
+    'mod/guacamole:configtimetoshutdown' => [
       'riskbitmask' => RISK_XSS,
       'captype' => 'write',
       'contextlevel' => CONTEXT_COURSE,
-      'archetypes' => array(
+      'archetypes' => [
           'editingteacher' => CAP_ALLOW,
-          'manager' => CAP_ALLOW
-      )
-    ),
+          'manager' => CAP_ALLOW,
+      ],
+    ],
 
-    'mod/guacamole:configdaystodelete' => array(
+    'mod/guacamole:configdaystodelete' => [
       'riskbitmask' => RISK_XSS,
       'captype' => 'write',
       'contextlevel' => CONTEXT_COURSE,
-      'archetypes' => array(
+      'archetypes' => [
           'editingteacher' => CAP_ALLOW,
-          'manager' => CAP_ALLOW
-      )
-    )
-);
+          'manager' => CAP_ALLOW,
+      ],
+    ],
+];

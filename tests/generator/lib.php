@@ -15,22 +15,37 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Redirect the user to the appropriate submission related page
+ * Data generator for mod_guacamole.
  *
  * @package    mod_guacamole
  * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once("../../config.php");
-global $DB;
+/**
+ * mod_guacamole data generator class.
+ */
+class mod_guacamole_generator extends testing_module_generator {
+    /**
+     * Creates a new instance of the guacamole activity.
+     *
+     * @param array|stdClass|null $record
+     * @param array|null $options
+     * @return stdClass
+     */
+    public function create_instance($record = null, array $options = null) {
+        $record = (object)(array)$record;
 
-$idimagen = optional_param('idimagen', 0, PARAM_TEXT);
-$imagen = $DB->get_record('guacamole_images', ['id' => $idimagen]);
-$defaultdaystodelete = $imagen->defaultdaystodelete;
-$defaultminutestoshutdown = $imagen->defaultminutestoshutdown;
+        if (!isset($record->imageid)) {
+            $record->imageid = 0;
+        }
+        if (!isset($record->minutestoshutdown)) {
+            $record->minutestoshutdown = 60;
+        }
+        if (!isset($record->daystodelete)) {
+            $record->daystodelete = 7;
+        }
 
-echo "<script>";
-echo "document.getElementById(\"id_daystodelete\").value=" . $defaultdaystodelete . ";";
-echo "document.getElementById(\"id_minutestoshutdown\").value=" . $defaultminutestoshutdown . ";";
-echo "</script>";
+        return parent::create_instance($record, $options);
+    }
+}

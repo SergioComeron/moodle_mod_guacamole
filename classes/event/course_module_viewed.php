@@ -37,7 +37,6 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class course_module_viewed extends \core\event\course_module_viewed {
-
     /**
      * Initialize the event
      */
@@ -50,6 +49,6 @@ class course_module_viewed extends \core\event\course_module_viewed {
      * Mapping between log fields and event properties.
      */
     public static function get_objectid_mapping() {
-        return array('db' => 'guacamole', 'restore' => 'guacamole');
+        return ['db' => 'guacamole', 'restore' => 'guacamole'];
     }
 }
