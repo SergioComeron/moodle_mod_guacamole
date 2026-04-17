@@ -38,6 +38,10 @@ $userid  = optional_param('usr', 0, PARAM_INT);
 
 require_login($course, true, $cm);
 
+if ($userid !== (int)$USER->id) {
+    throw new moodle_exception('accessdenied', 'admin');
+}
+
 $PAGE->set_url('/mod/guacamole/start.php');
 
 $user = $DB->get_record('user', ['id' => $userid]);
