@@ -29,7 +29,7 @@ jobs:
           --health-retries=5
 
       pgsql:
-        image: postgres:14
+        image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -115,5 +115,5 @@ jobs:
         if: always()
 
       - name: PHPUnit
-        run: moodle-plugin-ci phpunit --coverage-text
+        run: moodle-plugin-ci phpunit
         if: always()
