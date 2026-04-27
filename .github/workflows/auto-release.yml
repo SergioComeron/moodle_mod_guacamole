@@ -3,8 +3,7 @@ name: Auto Release on Version Bump
 on:
   push:
     branches: [master]
-    paths:
-      - 'version.php'
+  workflow_dispatch:
 
 jobs:
   auto-release:
