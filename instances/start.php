@@ -54,21 +54,49 @@ $guacamolecomputer   = $DB->get_record('guacamole_computers', ['id' => $computer
 $stateblocked = $guacamolecomputer != null &&
     in_array($guacamolecomputer->state, ['deleting', 'loading', 'shutdown']);
 
+$title    = get_string('vm_title', 'guacamole');
+$creating = get_string('vm_creating', 'guacamole');
+$errmsg   = get_string('guacamoleautherror', 'mod_guacamole');
+$trylater = get_string('trylater', 'guacamole');
+$noavail  = get_string('noavailable', 'guacamole');
+
 echo '<!DOCTYPE html>';
-echo '<html><head>';
+echo '<html lang="' . current_language() . '"><head>';
 echo '<meta charset="utf-8">';
-echo '<link rel="stylesheet" type="text/css" href="' . $CFG->wwwroot . '/mod/guacamole/styles.css" media="screen" />';
+echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+echo '<title>' . s($title) . '</title>';
+echo '<style>';
+echo '* { margin:0; padding:0; box-sizing:border-box; }';
+echo 'body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+echo '       background:#f0f4f8; display:flex; align-items:center;';
+echo '       justify-content:center; min-height:100vh; }';
+echo '.card { background:#fff; border-radius:12px;';
+echo '        box-shadow:0 4px 24px rgba(0,0,0,.10);';
+echo '        padding:3rem 2.5rem; max-width:480px; width:90%; text-align:center; }';
+echo '.icon { font-size:2.5rem; margin-bottom:1rem; }';
+echo 'h1 { font-size:1.3rem; font-weight:600; color:#1a2b3c; margin-bottom:.5rem; }';
+echo '.msg { color:#6b7c93; font-size:.95rem; margin-bottom:2rem;';
+echo '       min-height:1.4em; transition:opacity .3s; }';
+echo '.bar-wrap { background:#e8edf2; border-radius:999px; height:10px;';
+echo '            overflow:hidden; margin-bottom:.75rem; }';
+echo '.bar { height:100%; border-radius:999px; width:0%;';
+echo '       background:linear-gradient(90deg,#0f6cbf,#29a3e4);';
+echo '       transition:width .6s ease; }';
+echo '.pct { font-size:.85rem; color:#a0aebb; }';
+echo '.error { color:#c0392b; font-size:.95rem; margin-top:1.5rem; display:none; }';
+echo '</style>';
 echo '</head><body>';
+echo '<div class="card">';
+echo '<div class="icon">🖥️</div>';
+echo '<h1>' . s($title) . '</h1>';
 
 if ($stateblocked) {
-    echo '<br><br><br><br>';
-    echo '<h3 style="text-align:center;">' . get_string('trylater', 'guacamole') . '</h3>';
+    echo '<p class="msg">' . s($trylater) . '</p>';
 } else if ($instancesavailables > 0 || computerStartedByUser($userid, $imageid) != null) {
-    $startstr    = get_string('starting', 'guacamole');
-    $redirectstr = get_string('redirectedfewminutes', 'guacamole');
-    $loadinghtml = '<p style="text-align:center;"><img src="' . $CFG->wwwroot . '/mod/guacamole/loading.gif"/></p>'
-        . '<h3 style="text-align:center;">' . $startstr . '</h3>'
-        . '<p style="text-align:center;">' . $redirectstr . '</p>';
+    echo '<p class="msg" id="status-msg">' . s($creating) . '</p>';
+    echo '<div class="bar-wrap"><div class="bar" id="bar"></div></div>';
+    echo '<div class="pct" id="pct">0%</div>';
+    echo '<p class="error" id="error-msg">' . s($errmsg) . '</p>';
 
     $params = json_encode([
         'img'     => $imageid,
@@ -78,53 +106,71 @@ if ($stateblocked) {
         'comp'    => $computerid,
         'sesskey' => sesskey(),
     ]);
-
-    echo '<div id="wait">' . $loadinghtml . '</div>';
-    $errmsg = get_string('guacamoleautherror', 'mod_guacamole');
-    echo '<div id="error-msg" style="display:none;text-align:center;color:red;padding:2em;">'
-        . s($errmsg) . '</div>';
-    $statusurl = json_encode($CFG->wwwroot . '/mod/guacamole/instances/status.php');
-    $loadurl   = json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php');
     $statparams = json_encode([
         'id'      => $id,
         'img'     => $imageid,
         'usr'     => $userid,
         'sesskey' => sesskey(),
     ]);
+    $loadurl   = json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php');
+    $statusurl = json_encode($CFG->wwwroot . '/mod/guacamole/instances/status.php');
 
     echo '<script>';
-    echo 'document.addEventListener("DOMContentLoaded", function() {';
-    echo '  var loadParams = new URLSearchParams(' . $params . ');';
-    echo '  var statusParams = new URLSearchParams(' . $statparams . ');';
-    echo '  var urlG = null;';
-    echo '  function showError(msg) {';
-    echo '    document.getElementById("wait").style.display = "none";';
-    echo '    var el = document.getElementById("error-msg");';
-    echo '    if (msg) { el.textContent = msg; }';
-    echo '    el.style.display = "block";';
-    echo '  }';
-    echo '  function pollStatus() {';
-    echo '    fetch(' . $statusurl . ', {method: "POST", body: statusParams})';
-    echo '      .then(function(r) { return r.json(); })';
-    echo '      .then(function(d) {';
-    echo '        if (d.ready) { document.location.href = urlG; }';
-    echo '        else { setTimeout(pollStatus, 5000); }';
-    echo '      })';
-    echo '      .catch(function() { setTimeout(pollStatus, 5000); });';
-    echo '  }';
-    echo '  fetch(' . $loadurl . ', {method: "POST", body: loadParams})';
-    echo '    .then(function(r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })';
-    echo '    .then(function(data) {';
-    echo '      if (data.error) { throw new Error(data.error); }';
-    echo '      urlG = data.urlG;';
-    echo '      setTimeout(pollStatus, 5000);';
+    echo 'var bar=document.getElementById("bar");';
+    echo 'var msg=document.getElementById("status-msg");';
+    echo 'var pct=document.getElementById("pct");';
+    echo 'var urlG=null;';
+    echo 'var progress=0;';
+
+    echo 'function setProgress(p,text){';
+    echo '  progress=Math.min(p,100);';
+    echo '  bar.style.width=progress+"%";';
+    echo '  pct.textContent=Math.round(progress)+"%";';
+    echo '  if(text){msg.textContent=text;}';
+    echo '}';
+
+    // Phase 1: animate 0→48% slowly over 90 seconds while load.php runs.
+    echo 'var phase1=setInterval(function(){';
+    echo '  if(progress<48){setProgress(progress+0.53);}';
+    echo '  else{clearInterval(phase1);}';
+    echo '},1000);';
+
+    echo 'function showError(m){';
+    echo '  clearInterval(phase1);';
+    echo '  document.getElementById("error-msg").textContent=m||' . json_encode($errmsg) . ';';
+    echo '  document.getElementById("error-msg").style.display="block";';
+    echo '  msg.style.opacity="0";';
+    echo '  bar.style.background="#e74c3c";';
+    echo '}';
+
+    echo 'var statusParams=new URLSearchParams(' . $statparams . ');';
+    echo 'function pollStatus(){';
+    echo '  fetch(' . $statusurl . ',{method:"POST",body:statusParams})';
+    echo '    .then(function(r){return r.json();})';
+    echo '    .then(function(d){';
+    echo '      if(d.message){setProgress(Math.min(progress+3,92),d.message);}';
+    echo '      if(d.ready){';
+    echo '        setProgress(100,d.message);';
+    echo '        setTimeout(function(){document.location.href=urlG;},600);';
+    echo '      } else {setTimeout(pollStatus,5000);}';
     echo '    })';
-    echo '    .catch(function(e) { showError(e && e.message ? e.message : null); });';
-    echo '});';
+    echo '    .catch(function(){setTimeout(pollStatus,5000);});';
+    echo '}';
+
+    echo 'var loadParams=new URLSearchParams(' . $params . ');';
+    echo 'fetch(' . $loadurl . ',{method:"POST",body:loadParams})';
+    echo '  .then(function(r){if(!r.ok){throw new Error(r.status);}return r.json();})';
+    echo '  .then(function(data){';
+    echo '    if(data.error){throw new Error(data.error);}';
+    echo '    clearInterval(phase1);';
+    echo '    urlG=data.urlG;';
+    echo '    setProgress(55);';
+    echo '    setTimeout(pollStatus,5000);';
+    echo '  })';
+    echo '  .catch(function(e){showError(e&&e.message?e.message:null);});';
     echo '</script>';
 } else {
-    echo '<br><br><br><br>';
-    echo '<h3 style="text-align:center;">' . get_string('noavailable', 'guacamole') . '</h3>';
+    echo '<p class="msg">' . s($noavail) . '</p>';
 }
 
-echo '</body></html>';
+echo '</div></body></html>';
