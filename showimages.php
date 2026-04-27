@@ -58,7 +58,6 @@ $PAGE->navbar->add(get_string('modulename', 'guacamole'));
 $PAGE->navbar->add($strmanage, $baseurl);
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading($strmanage);
 
 $datefmt = get_string('strftimedatetimeshort', 'langconfig');
 
