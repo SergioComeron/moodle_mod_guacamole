@@ -45,6 +45,8 @@ if ($userid !== (int)$USER->id) {
 
 $PAGE->set_url('/mod/guacamole/start.php');
 
+try {
+
 $user      = $DB->get_record('user', ['id' => $userid]);
 $guacamole = $DB->get_record('guacamole', ['id' => $gu]);
 $image     = $DB->get_record('guacamole_images', ['id' => $imageid]);
@@ -169,3 +171,8 @@ $DB->update_record('guacamole_computers', $guacamolecomputer);
 $varr          = [];
 $varr['urlG']  = $urlg;
 echo json_encode($varr);
+
+} catch (Throwable $e) {
+    http_response_code(200);
+    echo json_encode(['error' => get_class($e) . ': ' . $e->getMessage()]);
+}

@@ -88,10 +88,12 @@ if ($stateblocked) {
     echo '  var params = new URLSearchParams(' . $params . ');';
     echo '  fetch(' . json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php') . ', {method: "POST", body: params})';
     echo '    .then(function(r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })';
-    echo '    .then(function(data) { document.location.href = data.urlG; })';
-    echo '    .catch(function() {';
+    echo '    .then(function(data) { if (data.error) { throw new Error(data.error); } document.location.href = data.urlG; })';
+    echo '    .catch(function(e) {';
     echo '      document.getElementById("wait").style.display = "none";';
-    echo '      document.getElementById("error-msg").style.display = "block";';
+    echo '      var el = document.getElementById("error-msg");';
+    echo '      if (e && e.message) { el.textContent = e.message; }';
+    echo '      el.style.display = "block";';
     echo '    });';
     echo '});';
     echo '</script>';
