@@ -351,6 +351,33 @@ function obtainimagename($instance) {
 }
 
 /**
+ * Returns the GCP status string of an instance (RUNNING, STAGING, TERMINATED…)
+ * or empty string if the instance does not exist.
+ *
+ * @param string $instance The instance name to query.
+ * @return string GCP status string, or '' if not found.
+ */
+function getinstancestatus($instance) {
+    global $CFG;
+    subirFileJson();
+    $client = new Google_Client();
+    $client->setApplicationName('Pruebas');
+    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
+    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
+    $service = new Google_Service_Compute($client);
+    try {
+        $inst = $service->instances->get(
+            $CFG->guacamole_project_cloud,
+            $CFG->guacamole_zone_cloud,
+            $instance
+        );
+        return $inst->getStatus();
+    } catch (Exception $e) {
+        return '';
+    }
+}
+
+/**
  * Starts a stopped GCP Compute Engine instance.
  *
  * @param string $instance The instance name to start.

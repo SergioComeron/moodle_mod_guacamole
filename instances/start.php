@@ -83,18 +83,43 @@ if ($stateblocked) {
     $errmsg = get_string('guacamoleautherror', 'mod_guacamole');
     echo '<div id="error-msg" style="display:none;text-align:center;color:red;padding:2em;">'
         . s($errmsg) . '</div>';
+    $statusurl = json_encode($CFG->wwwroot . '/mod/guacamole/instances/status.php');
+    $loadurl   = json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php');
+    $statparams = json_encode([
+        'id'      => $id,
+        'img'     => $imageid,
+        'usr'     => $userid,
+        'sesskey' => sesskey(),
+    ]);
+
     echo '<script>';
     echo 'document.addEventListener("DOMContentLoaded", function() {';
-    echo '  var params = new URLSearchParams(' . $params . ');';
-    echo '  fetch(' . json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php') . ', {method: "POST", body: params})';
+    echo '  var loadParams = new URLSearchParams(' . $params . ');';
+    echo '  var statusParams = new URLSearchParams(' . $statparams . ');';
+    echo '  var urlG = null;';
+    echo '  function showError(msg) {';
+    echo '    document.getElementById("wait").style.display = "none";';
+    echo '    var el = document.getElementById("error-msg");';
+    echo '    if (msg) { el.textContent = msg; }';
+    echo '    el.style.display = "block";';
+    echo '  }';
+    echo '  function pollStatus() {';
+    echo '    fetch(' . $statusurl . ', {method: "POST", body: statusParams})';
+    echo '      .then(function(r) { return r.json(); })';
+    echo '      .then(function(d) {';
+    echo '        if (d.ready) { document.location.href = urlG; }';
+    echo '        else { setTimeout(pollStatus, 5000); }';
+    echo '      })';
+    echo '      .catch(function() { setTimeout(pollStatus, 5000); });';
+    echo '  }';
+    echo '  fetch(' . $loadurl . ', {method: "POST", body: loadParams})';
     echo '    .then(function(r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })';
-    echo '    .then(function(data) { if (data.error) { throw new Error(data.error); } document.location.href = data.urlG; })';
-    echo '    .catch(function(e) {';
-    echo '      document.getElementById("wait").style.display = "none";';
-    echo '      var el = document.getElementById("error-msg");';
-    echo '      if (e && e.message) { el.textContent = e.message; }';
-    echo '      el.style.display = "block";';
-    echo '    });';
+    echo '    .then(function(data) {';
+    echo '      if (data.error) { throw new Error(data.error); }';
+    echo '      urlG = data.urlG;';
+    echo '      setTimeout(pollStatus, 5000);';
+    echo '    })';
+    echo '    .catch(function(e) { showError(e && e.message ? e.message : null); });';
     echo '});';
     echo '</script>';
 } else {
