@@ -195,4 +195,113 @@ final class lib_test extends \advanced_testcase {
 
         $this->assertNull($result);
     }
+
+    /**
+     * Test computerStartedByUser returns null for loading state (only 'started' counts).
+     */
+    public function test_computer_started_by_user_returns_null_when_loading(): void {
+        global $DB;
+
+        $user = $this->getDataGenerator()->create_user();
+        $now = time();
+
+        $computer = new \stdClass();
+        $computer->imageid = $this->image->id;
+        $computer->userid = $user->id;
+        $computer->cloudimage = 'test-image';
+        $computer->guaidconnection = null;
+        $computer->state = 'loading';
+        $computer->timecreated = $now;
+        $computer->timelaststart = $now;
+        $computer->timelaststop = 0;
+        $computer->minutestoshutdown = 60;
+        $computer->daystodelete = 7;
+        $computer->timetodelete = $now + 7 * 86400;
+        $computer->root = 'http://localhost';
+        $DB->insert_record('guacamole_computers', $computer);
+
+        $this->assertNull(computerStartedByUser($user->id, $this->image->id));
+    }
+
+    /**
+     * Test getComputersUsed returns zero when no computers exist for the image.
+     */
+    public function test_get_computers_used_returns_zero_when_empty(): void {
+        $this->assertEquals(0, getComputersUsed($this->image->id));
+    }
+
+    /**
+     * Test getComputersUsed does not count stopped or deleting states.
+     */
+    public function test_get_computers_used_ignores_stopped_and_deleting(): void {
+        global $DB;
+
+        $now = time();
+        $base = [
+            'imageid' => $this->image->id,
+            'cloudimage' => 'test-image',
+            'guaidconnection' => null,
+            'timecreated' => $now,
+            'timelaststart' => $now,
+            'timelaststop' => 0,
+            'minutestoshutdown' => 60,
+            'daystodelete' => 7,
+            'timetodelete' => $now + 7 * 86400,
+            'root' => 'http://localhost',
+        ];
+
+        foreach (['stopped', 'deleting'] as $state) {
+            $record = (object) array_merge($base, [
+                'state' => $state,
+                'userid' => $this->getDataGenerator()->create_user()->id,
+            ]);
+            $DB->insert_record('guacamole_computers', $record);
+        }
+
+        $this->assertEquals(0, getComputersUsed($this->image->id));
+    }
+
+    /**
+     * Test getComputersUsed is scoped to the given image.
+     */
+    public function test_get_computers_used_scoped_to_image(): void {
+        global $DB;
+
+        $now = time();
+        $otherimage = new \stdClass();
+        $otherimage->name = 'Other image';
+        $otherimage->guaidconnection = '2';
+        $otherimage->cloudimage = 'other-image';
+        $otherimage->defaultminutestoshutdown = 60;
+        $otherimage->defaultdaystodelete = 7;
+        $otherimage->maxnuminstances = 5;
+        $otherimage->active = 1;
+        $otherimage->id = $DB->insert_record('guacamole_images', $otherimage);
+
+        $base = [
+            'cloudimage' => 'test-image',
+            'guaidconnection' => '1',
+            'state' => 'started',
+            'timecreated' => $now,
+            'timelaststart' => $now,
+            'timelaststop' => 0,
+            'minutestoshutdown' => 60,
+            'daystodelete' => 7,
+            'timetodelete' => $now + 7 * 86400,
+            'root' => 'http://localhost',
+        ];
+
+        // One computer for each image.
+        $DB->insert_record('guacamole_computers', (object) array_merge($base, [
+            'imageid' => $this->image->id,
+            'userid' => $this->getDataGenerator()->create_user()->id,
+        ]));
+        $DB->insert_record('guacamole_computers', (object) array_merge($base, [
+            'imageid' => $otherimage->id,
+            'userid' => $this->getDataGenerator()->create_user()->id,
+        ]));
+
+        $this->assertEquals(1, getComputersUsed($this->image->id));
+        $this->assertEquals(1, getComputersUsed($otherimage->id));
+    }
 }

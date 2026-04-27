@@ -51,20 +51,37 @@ class cron_task_delete extends \core\task\scheduled_task {
     public function execute() {
         global $CFG, $DB;
 
-        $guacamolecomputers = $DB->get_records('guacamole_computers', ['state' => 'stopped', 'root' => $CFG->wwwroot]);
+        // Process manually-deleted machines (marked 'deleting' by showimages.php).
+        $pendingdelete = $DB->get_records('guacamole_computers', ['state' => 'deleting', 'root' => $CFG->wwwroot]);
+        foreach ($pendingdelete as $guacamolecomputer) {
+            $instancename = strtolower($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+            mtrace($instancename . '....eliminando (manual)');
+            try {
+                stopinstance($instancename);
+            } catch (Throwable $e) {
+                mtrace('....error GCP: ' . $e->getMessage());
+            }
+            $DB->delete_records('guacamole_computers', ['id' => $guacamolecomputer->id]);
+        }
 
+        // Process machines that have exceeded their time-to-delete.
+        $guacamolecomputers = $DB->get_records('guacamole_computers', ['state' => 'stopped', 'root' => $CFG->wwwroot]);
         foreach ($guacamolecomputers as $guacamolecomputer) {
-            echo $guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid;
+            $instancename = strtolower($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+            mtrace($instancename);
             if ($guacamolecomputer->timetodelete < time()) {
                 $guacamolecomputer->state = 'deleting';
                 $DB->update_record('guacamole_computers', $guacamolecomputer);
-                echo "....eliminada";
-                stopinstance($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                try {
+                    stopinstance($instancename);
+                } catch (Throwable $e) {
+                    mtrace('....error GCP: ' . $e->getMessage());
+                }
                 $DB->delete_records('guacamole_computers', ['imageid' => $guacamolecomputer->imageid, 'userid' => $guacamolecomputer->userid]);
+                mtrace('....eliminada');
             } else {
-                echo "....no eliminada";
+                mtrace('....no eliminada');
             }
-            echo "<br>";
         }
     }
 }

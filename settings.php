@@ -42,6 +42,18 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext('guacamole_default_minutes_to_shutdown', get_string('defaulttimetoshutdown', 'guacamole'), null, null));
     $settings->add(new admin_setting_configtext('guacamole_default_days_to_delete', get_string('defaultdaystodelete', 'guacamole'), null, null));
     $settings->add(new admin_setting_configtext('guacamole_seconds_wait', get_string('secondswait', 'guacamole'), get_string('secondswaitex', 'guacamole'), '50'));
+    $settings->add(new admin_setting_configtext(
+        'guacamole_machine_type',
+        get_string('gcpmachinetype', 'guacamole'),
+        get_string('gcpmachinetypeex', 'guacamole'),
+        'n2d-custom-2-6144'
+    ));
+    $settings->add(new admin_setting_configtext(
+        'guacamole_disk_type',
+        get_string('gcpdisktype', 'guacamole'),
+        get_string('gcpdisktypeex', 'guacamole'),
+        'pd-ssd'
+    ));
     $settings->add(new admin_setting_confightmleditor('guacamole_help', get_string('help', 'guacamole'), get_string('helpex', 'guacamole'), null));
 
     $settings->add(new admin_setting_configstoredfile('mod_guacamole/jsonfile', 'json file', get_string('jsonfile', 'guacamole'), 'jsonfile'));

@@ -51,6 +51,25 @@ class cron_task extends \core\task\scheduled_task {
     public function execute() {
         global $CFG, $DB;
 
+        $now = time();
+
+        // Clean up machines stuck in 'loading' for more than 30 minutes.
+        // This happens when the user closes the loading tab before status.php
+        // can update the state to 'started'.
+        $loadingstale = $now - 1800;
+        $stalloading = $DB->get_records_select(
+            'guacamole_computers',
+            'state = ? AND root = ? AND timelaststart < ?',
+            ['loading', $CFG->wwwroot, $loadingstale]
+        );
+        foreach ($stalloading as $stalled) {
+            $stalled->state = 'stopped';
+            $stalled->timelaststop = $now;
+            $DB->update_record('guacamole_computers', $stalled);
+            $computername = strtolower($stalled->cloudimage . '-' . $stalled->imageid . '-' . $stalled->userid);
+            mtrace($computername . '....loading huerfana, marcada stopped');
+        }
+
         $token = guacamole_get_token();
         $activeconnections = guacamole_api_request($token, '/guacamole/api/session/data/mysql/activeConnections');
 
@@ -60,69 +79,51 @@ class cron_task extends \core\task\scheduled_task {
 
         $guacamolecomputers = $DB->get_records('guacamole_computers', ['state' => 'started', 'root' => $CFG->wwwroot]);
         foreach ($guacamolecomputers as $guacamolecomputer) {
-            echo ($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
-            $timelaststart = $guacamolecomputer->timelaststart;
-            $timedesconection = 0;
-            $timedesconection = fechaDesconexion($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
-            $timetostop = $timedesconection + $guacamolecomputer->minutestoshutdown * 60;
-            $today = time();
-            $guacamolecomputer->timetodelete = $today + ($guacamolecomputer->daystodelete * 60 * 60 * 24);
+            $computername = strtolower($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+            mtrace($computername);
+
+            $now = time();
+            $guacamolecomputer->timetodelete = $now + ($guacamolecomputer->daystodelete * 60 * 60 * 24);
             $DB->update_record('guacamole_computers', $guacamolecomputer);
-            if (!in_array($guacamolecomputer->guaidconnection, $connections)) {
-                if ($timedesconection < $timelaststart) {
-                    $timetostop = $timelaststart + $guacamolecomputer->minutestoshutdown * 60 + 120;
-                    $today = time();
-                    if ($timetostop < $today) {
-                        $guacamolecomputer->state = 'shutdown';
-                        $DB->update_record('guacamole_computers', $guacamolecomputer);
-                        $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
-                        quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
-                        eliminarConexion($guacamolecomputer->guaidconnection);
 
-                        stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
-                        $guacamolecomputer->guaidconnection = null;
-                        $guacamolecomputer->state = 'stopped';
-                        $guacamolecomputer->timelaststop = $today;
-                        $DB->update_record('guacamole_computers', $guacamolecomputer);
-                        echo "....parada";
-                    }
-                } else {
-                    if ($timetostop < $today) {
-                        $guacamolecomputer->state = 'shutdown';
-                        $DB->update_record('guacamole_computers', $guacamolecomputer);
-                        $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
-                        quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
-                        eliminarConexion($guacamolecomputer->guaidconnection);
-
-                        stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
-                        $guacamolecomputer->guaidconnection = null;
-                        $guacamolecomputer->state = 'stopped';
-                        $guacamolecomputer->timelaststop = $today;
-                        $DB->update_record('guacamole_computers', $guacamolecomputer);
-                        echo "....parada";
-                    } else {
-                        if ($timedesconection == 0) {
-                            $timetostop = $timelaststart + $guacamolecomputer->minutestoshutdown * 60 + 120;
-                            $today = time();
-
-                            if ($timetostop < $today) {
-                                $guacamolecomputer->state = 'shutdown';
-                                $DB->update_record('guacamole_computers', $guacamolecomputer);
-                                $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
-                                quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
-                                eliminarConexion($guacamolecomputer->guaidconnection);
-
-                                stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
-                                $guacamolecomputer->guaidconnection = null;
-                                $guacamolecomputer->state = 'stopped';
-                                $guacamolecomputer->timelaststop = $today;
-                                $DB->update_record('guacamole_computers', $guacamolecomputer);
-                                echo "....parada";
-                            }
-                        }
-                    }
-                }
+            // Skip machines with an active Guacamole session.
+            if (
+                !empty($guacamolecomputer->guaidconnection) &&
+                    in_array($guacamolecomputer->guaidconnection, $connections)
+            ) {
+                continue;
             }
+
+            $timelaststart    = $guacamolecomputer->timelaststart;
+            $timedesconection = fechaDesconexion($computername);
+
+            // Use disconnect time when it is more recent than the last start;
+            // otherwise fall back to last-start + 2-minute grace period.
+            if ($timedesconection > $timelaststart) {
+                $timetostop = $timedesconection + $guacamolecomputer->minutestoshutdown * 60;
+            } else {
+                $timetostop = $timelaststart + $guacamolecomputer->minutestoshutdown * 60 + 120;
+            }
+
+            if ($timetostop >= $now) {
+                continue;
+            }
+
+            $guacamolecomputer->state = 'shutdown';
+            $DB->update_record('guacamole_computers', $guacamolecomputer);
+
+            $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
+            if (!empty($guacamolecomputer->guaidconnection)) {
+                quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
+                eliminarConexion($guacamolecomputer->guaidconnection);
+            }
+
+            stopvm($computername);
+            $guacamolecomputer->guaidconnection = null;
+            $guacamolecomputer->state = 'stopped';
+            $guacamolecomputer->timelaststop = $now;
+            $DB->update_record('guacamole_computers', $guacamolecomputer);
+            mtrace('....parada');
         }
     }
 }

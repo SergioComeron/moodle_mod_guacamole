@@ -338,7 +338,7 @@ function guacamole_get_token() {
     $res = curl_exec($ch);
     curl_close($ch);
     $data = json_decode($res, true);
-    if (empty($data['authToken'])) {
+    if (!is_array($data) || empty($data['authToken'])) {
         throw new moodle_exception('guacamoleautherror', 'mod_guacamole');
     }
     return $data['authToken'];
@@ -373,7 +373,8 @@ function guacamole_api_request($token, $endpoint, $method = 'GET', $body = null,
     }
     $res = curl_exec($ch);
     curl_close($ch);
-    return json_decode($res, true) ?? [];
+    $decoded = json_decode($res, true);
+    return is_array($decoded) ? $decoded : [];
 }
 
 /**
@@ -399,7 +400,10 @@ function fechadesconexion($instancia) {
     $token = guacamole_get_token();
     $history = guacamole_api_request($token, '/guacamole/api/session/data/mysql/history/connections?order=-startDate');
     foreach ($history as $entry) {
-        if ($entry['connectionName'] === $instancia && !empty($entry['endDate'])) {
+        if (!is_array($entry)) {
+            continue;
+        }
+        if (($entry['connectionName'] ?? '') === $instancia && !empty($entry['endDate'])) {
             return (int) ($entry['endDate'] / 1000);
         }
     }
@@ -486,18 +490,12 @@ function obtenerlaboratorios() {
  * @return int Count of active computers.
  */
 function getcomputersused($image) {
-    global $CFG, $DB;
-    $computersused = 0;
-    $guacamolecomputers = $DB->get_records('guacamole_computers', []);
-    foreach ($guacamolecomputers as $guacamolecomputer) {
-        $isstarted = ($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'started') == 0);
-        $isloading = ($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'loading') == 0);
-        $isshutdown = ($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'shutdown') == 0);
-        if ($isstarted || $isloading || $isshutdown) {
-            $computersused += 1;
-        }
-    }
-    return $computersused;
+    global $DB;
+    return (int) $DB->count_records_select(
+        'guacamole_computers',
+        'imageid = ? AND state IN (?,?,?)',
+        [$image, 'started', 'loading', 'shutdown']
+    );
 }
 
 /**

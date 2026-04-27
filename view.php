@@ -28,8 +28,7 @@
 require_once(dirname(dirname(dirname(__FILE__))) . '/config.php');
 require_once(dirname(__FILE__) . '/lib.php');
 require_once(dirname(__FILE__) . '/locallib.php');
-require_once('../../config.php');
-require_once('./instances/lib.php');
+require_once(__DIR__ . '/instances/lib.php');
 
 
 global $USER;
@@ -45,7 +44,7 @@ if ($id) {
     $course     = $DB->get_record('course', ['id' => $guacamole->course], '*', MUST_EXIST);
     $cm         = get_coursemodule_from_instance('guacamole', $guacamole->id, $course->id, false, MUST_EXIST);
 } else {
-    error('You must specify a course_module ID or an instance ID');
+    throw new moodle_exception('invalidparameter', 'debug', '', 'You must specify a course_module ID or an instance ID');
 }
 
 require_login($course, true, $cm);
@@ -61,7 +60,6 @@ $event->trigger();
 $PAGE->set_url('/mod/guacamole/view.php', ['id' => $cm->id]);
 $PAGE->set_title(format_string($guacamole->name));
 $PAGE->set_heading(format_string($course->fullname));
-echo "<script src=\"//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js\"></script>";
 echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"./styles.css\" media=\"screen\" />";
 
 echo $OUTPUT->header();
@@ -83,7 +81,7 @@ if ($computerstarted != null) {
     // Su máquina ya se está ejecutando
     if ($computerstarted->state != 'deleting') {
         $imageidant = $computerstarted;
-        echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
+        echo "<div id=\"box\" style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
         $datetimeformat = 'd-m-Y H:i:s';
         $hourtimeformat = 'H:i:s';
         $datec = new \DateTime();
@@ -126,7 +124,7 @@ if ($computerstarted != null) {
             if ($guacamolecomputer->state != 'deleting') {
                 if ($guacamoleimage->active == 1) {
                     if ($guacamoleimage->cloudimage == $guacamolecomputer->cloudimage) {
-                        echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
+                        echo "<div id=\"box\" style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
                         $datetimeformat = 'd-m-Y H:i:s';
                         $hourtimeformat = 'H:i:s';
                         $datec = new \DateTime();
@@ -147,7 +145,7 @@ if ($computerstarted != null) {
                         echo "</div>";
                     } else {
                         // las cloudimage son distintas
-                        echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
+                        echo "<div id=\"box\" style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
                         $datetimeformat = 'd-m-Y H:i:s';
                         $hourtimeformat = 'H:i:s';
                         $datec = new \DateTime();
@@ -168,7 +166,7 @@ if ($computerstarted != null) {
                         echo "</div>";
 
                         echo "<br><br>";
-                        echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px;\">";
+                        echo "<div id=\"box2\" style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px;\">";
                         echo "<div class=\"alert alert-danger\" role=\"alert\">";
                         echo "<h4 class=\"alert-heading\">" . get_string('notice', 'guacamole') . "</h4>";
                         echo "<p>" . get_string('machinenewbaseimage', 'guacamole') . "</p>";
@@ -204,20 +202,23 @@ echo "<br>";
 echo "<h2>" . get_string('help', 'moodle') . "</h2>";
 echo $CFG->guacamole_help;
 
-echo "<script>";
-echo    "$('.button').on('click', function(){";
-$alerthtml = '<div class=\"alert alert-danger\" role=\"alert\">' . get_string('openinnewtab', 'guacamole');
-$alerthtml .= '<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">';
-$alerthtml .= '<span aria-hidden=\"true\">&times;</span></button></div>' . $CFG->guacamole_help;
-echo        "$('#region-main').html('" . $alerthtml . "');";
-echo        "window.open(" . json_encode($url) . ", '_blank');";
-echo    "});";
-echo "</script>";
-echo "<script>";
-echo    "$('.button2').on('click', function(){";
-echo        "$('#region-main').html('" . $alerthtml . "');";
-echo        "window.open(" . json_encode($urlant) . ", '_blank');";
-echo    "});";
-echo "</script>";
+$alerthtml = '<div class="alert alert-danger" role="alert">' . get_string('openinnewtab', 'guacamole');
+$alerthtml .= '<button type="button" class="close" data-dismiss="alert" aria-label="Close">';
+$alerthtml .= '<span aria-hidden="true">&times;</span></button></div>' . $CFG->guacamole_help;
+echo '<script>';
+echo 'var alertHtml=' . json_encode($alerthtml) . ';';
+echo 'document.querySelectorAll(".button").forEach(function(btn){';
+echo '  btn.addEventListener("click",function(){';
+echo '    document.getElementById("region-main").innerHTML=alertHtml;';
+echo '    window.open(' . json_encode($url) . ',"_blank");';
+echo '  });';
+echo '});';
+echo 'document.querySelectorAll(".button2").forEach(function(btn){';
+echo '  btn.addEventListener("click",function(){';
+echo '    document.getElementById("region-main").innerHTML=alertHtml;';
+echo '    window.open(' . json_encode($urlant) . ',"_blank");';
+echo '  });';
+echo '});';
+echo '</script>';
 
 echo $OUTPUT->footer();

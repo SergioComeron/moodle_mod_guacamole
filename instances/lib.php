@@ -30,6 +30,30 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/mod/guacamole/instances/google-api-php-client-2.2.1/vendor/autoload.php');
 
 /**
+ * Returns a Google_Client configured with auth and a hard HTTP timeout.
+ *
+ * Every GCP API call goes through Guzzle — without a timeout the PHP process
+ * can hang indefinitely if the network stalls. 60 s per request is generous
+ * enough for any single Compute Engine operation while still bounding the
+ * worst-case hang time.
+ *
+ * @return Google_Client
+ */
+function guacamole_gcp_client() {
+    global $CFG;
+    subirFileJson();
+    $client = new Google_Client();
+    $client->setApplicationName('mod_guacamole');
+    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
+    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
+    $client->setHttpClient(new \GuzzleHttp\Client([
+        'connect_timeout' => 10,
+        'timeout'         => 60,
+    ]));
+    return $client;
+}
+
+/**
  * Uploads the JSON service-account key file to the Moodle temp directory.
  */
 function subirfilejson() {
@@ -54,16 +78,7 @@ function createinstance($imageid, $userid) {
     $computername = $image->cloudimage . '-' . $image->id . '-' . $user->id;
     $instancia = strtolower($computername);
 
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
 
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
@@ -73,7 +88,8 @@ function createinstance($imageid, $userid) {
     // Le doy un nombre
     $instance->setName($instancia);
     // Le pongo un tipo de instancia
-    $instance->setMachineType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/machineTypes/n2d-custom-2-6144');
+    $machinetype = $CFG->guacamole_machine_type ?? 'n2d-custom-2-6144';
+    $instance->setMachineType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/machineTypes/' . $machinetype);
     // Le pongo una interfaz de red
     $googlenetworkinterface = new Google_Service_Compute_NetworkInterface();
     $googlenetworkinterface->setNetwork('projects/' . $CFG->guacamole_project_cloud . '/global/networks/default');
@@ -94,35 +110,20 @@ function createinstance($imageid, $userid) {
     $newdisk->setName($instancia);
 
     // Cambia el tipo de disco aquí
-    $newdisk->setType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/diskTypes/pd-ssd');
+    $disktype = $CFG->guacamole_disk_type ?? 'pd-ssd';
+    $newdisk->setType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/diskTypes/' . $disktype);
 
     $imagedisk = $image->cloudimage;
     $newdisk->setSourceImage('https://www.googleapis.com/compute/v1/projects/' . $CFG->guacamole_project_cloud . '/global/images/' . $imagedisk);
 
-    // añado el disco al proyecto
-    try {
-        $insertdiskoperation = $service->disks->insert($project, $zone, $newdisk);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $insertdiskoperation->getName()
-            ) > 0
-        ) {
-            exit('Error inserting disk.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error añadiendo el disco " . $disk, "Exception: " . $e);
-        }
+    $insertdiskoperation = $service->disks->insert($project, $zone, $newdisk);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $insertdiskoperation->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error inserting disk: ' . $instancia);
     }
 
-    // Le digo que es booteable
     $bootdisk = $service->disks->get($project, $zone, $instancia);
-    if (!("READY" == $bootdisk->getStatus())) {
-        exit("Disk creation didn't succeed.");
+    if ("READY" !== $bootdisk->getStatus()) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', "Disk not ready after insert: " . $instancia);
     }
 
     $primarydisk = new Google_Service_Compute_AttachedDisk();
@@ -133,23 +134,9 @@ function createinstance($imageid, $userid) {
     $primarydisk->setType("PERSISTENT");
     $instance->setDisks([$primarydisk]);
 
-    try {
-        $response = $service->instances->insert($project, $zone, $instance);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $response->getName()
-            ) > 0
-        ) {
-            exit('Error inserting instance.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error creando la instancia: " . $instance, "Exception: " . $e);
-        }
+    $response = $service->instances->insert($project, $zone, $instance);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error inserting instance: ' . $instancia);
     }
 }
 
@@ -163,15 +150,7 @@ function existdisk($diskname) {
     global $CFG;
     $diskname = strtolower($diskname);
     $exist = false;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
@@ -195,34 +174,12 @@ function existdisk($diskname) {
  */
 function deleteinstance($instance) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
-    try {
-        $response = $service->instances->delete($project, $zone, $instance);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $response->getName()
-            ) > 0
-        ) {
-            exit('Error deleting instance.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error eliminando la instancia: " . $instance, "Exception: " . $e);
-        }
+    $response = $service->instances->delete($project, $zone, $instance);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error deleting instance: ' . $instance);
     }
 }
 
@@ -233,34 +190,12 @@ function deleteinstance($instance) {
  */
 function deletedisk($disk) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
-    try {
-        $response = $service->disks->delete($project, $zone, $disk);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $response->getName()
-            ) > 0
-        ) {
-            exit('Error deleting disk.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error eliminando el disco: " . $instance, "Exception: " . $e);
-        }
+    $response = $service->disks->delete($project, $zone, $disk);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error deleting disk: ' . $disk);
     }
 }
 
@@ -270,8 +205,6 @@ function deletedisk($disk) {
  * @param string $instancia The instance name to stop.
  */
 function stopinstance($instancia) {
-    require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
-    global $CFG, $DB;
     deleteInstance($instancia);
     deleteDisk($instancia);
 }
@@ -283,15 +216,7 @@ function stopinstance($instancia) {
  */
 function stopvm($instance) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
@@ -314,16 +239,7 @@ function stopvm($instance) {
 function existinstance($instance) {
     global $CFG;
     $exist = false;
-
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
@@ -351,6 +267,28 @@ function obtainimagename($instance) {
 }
 
 /**
+ * Returns the GCP status string of an instance (RUNNING, STAGING, TERMINATED…)
+ * or empty string if the instance does not exist.
+ *
+ * @param string $instance The instance name to query.
+ * @return string GCP status string, or '' if not found.
+ */
+function getinstancestatus($instance) {
+    global $CFG;
+    $service = new Google_Service_Compute(guacamole_gcp_client());
+    try {
+        $inst = $service->instances->get(
+            $CFG->guacamole_project_cloud,
+            $CFG->guacamole_zone_cloud,
+            $instance
+        );
+        return $inst->getStatus();
+    } catch (Exception $e) {
+        return '';
+    }
+}
+
+/**
  * Starts a stopped GCP Compute Engine instance.
  *
  * @param string $instance The instance name to start.
@@ -358,15 +296,7 @@ function obtainimagename($instance) {
  */
 function startinstance($instance) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
@@ -398,7 +328,8 @@ function waitforzoneoperationcompletion(
     $zone,
     $operation
 ) {
-    for ($x = 0; $x <= 20; $x++) {
+    $deadline = time() + 600; // 10-minute wall-clock limit.
+    for ($x = 0; $x <= 20 && time() < $deadline; $x++) {
         $operationstatus = $computeservice->zoneOperations->get(
             $project,
             $zone,
@@ -407,7 +338,7 @@ function waitforzoneoperationcompletion(
         if ("DONE" == $operationstatus->getStatus()) {
             return 0;
         }
-        sleep((2 * $x));
+        sleep(min(2 * $x, $deadline - time()));
     }
     return 1;
 }
