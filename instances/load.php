@@ -37,6 +37,7 @@ $computerid = optional_param('comp', 0, PARAM_INT);
 $userid  = optional_param('usr', 0, PARAM_INT);
 
 require_login($course, true, $cm);
+require_sesskey();
 
 if ($userid !== (int)$USER->id) {
     throw new moodle_exception('accessdenied', 'admin');
