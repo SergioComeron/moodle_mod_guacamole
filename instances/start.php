@@ -15,10 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * English strings for guacamole
- *
- * You can have a rather longer description of the file as well,
- * if you like, and it can span multiple lines.
+ * Loading page that triggers VM startup via AJAX and redirects to Guacamole.
  *
  * @package    mod_guacamole
  * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
@@ -28,64 +25,70 @@
 require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
 require_once(dirname(dirname(__FILE__)) . '/lib.php');
 
-global $CFG, $DB;
+global $CFG, $DB, $OUTPUT, $PAGE;
 require_once($CFG->dirroot . '/mod/guacamole/instances/lib.php');
-$id = optional_param('id', 0, PARAM_INT);
-echo "<script src=\"https://code.jquery.com/jquery-3.4.1.js\"></script>";
 
-$gu = optional_param('gu', 0, PARAM_INT);
+$id         = optional_param('id', 0, PARAM_INT);
+$gu         = optional_param('gu', 0, PARAM_INT);
 $computerid = optional_param('comp', 0, PARAM_INT);
-$imageid = optional_param('img', 0, PARAM_INT);
-$userid  = optional_param('usr', 0, PARAM_INT);
+$imageid    = optional_param('img', 0, PARAM_INT);
+$userid     = optional_param('usr', 0, PARAM_INT);
 
-$guacamoleimage = $DB->get_record('guacamole_images', ['id' => $imageid]);
+$cm     = get_coursemodule_from_id('guacamole', $id, 0, false, MUST_EXIST);
+$course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
+require_login($course, true, $cm);
+
+$context = context_module::instance($cm->id);
+$PAGE->set_url('/mod/guacamole/instances/start.php', [
+    'id' => $id, 'img' => $imageid, 'usr' => $userid, 'gu' => $gu, 'comp' => $computerid,
+]);
+$PAGE->set_context($context);
+$PAGE->set_title(get_string('modulename', 'guacamole'));
+
+$guacamoleimage    = $DB->get_record('guacamole_images', ['id' => $imageid]);
 $instancesavailables = $guacamoleimage->maxnuminstances - getComputersUsed($imageid);
-$guacamolecomputer = null;
 $guacamolecomputer = $DB->get_record('guacamole_computers', ['id' => $computerid]);
-if ($guacamolecomputer != null && ($guacamolecomputer->state == 'deleting' || $guacamolecomputer->state == 'loading' || $guacamolecomputer->state == 'shutdown')) {
-    // La máquina no esta ni started ni stopped
-    echo ('<br><br><br><br>');
-    echo "<h3 style=\"text-align:center;\">" . get_string('trylater', 'guacamole') . "</h3>";
+
+echo $OUTPUT->header();
+
+$stateblocked = $guacamolecomputer != null &&
+    in_array($guacamolecomputer->state, ['deleting', 'loading', 'shutdown']);
+if ($stateblocked) {
+    echo '<br><br><br><br>';
+    echo '<h3 style="text-align:center;">' . get_string('trylater', 'guacamole') . '</h3>';
+} else if ($instancesavailables > 0 || computerStartedByUser($userid, $imageid) != null) {
+    $startstr    = get_string('starting', 'guacamole');
+    $redirectstr = get_string('redirectedfewminutes', 'guacamole');
+    $loadinghtml = '<p style="text-align:center;"><img src="../loading.gif"/></p>'
+        . '<h3 style="text-align:center;">' . $startstr . '</h3>'
+        . '<p style="text-align:center;">' . $redirectstr . '</p>';
+
+    $params = json_encode([
+        'img'     => $imageid,
+        'usr'     => $userid,
+        'id'      => $id,
+        'gu'      => $gu,
+        'comp'    => $computerid,
+        'sesskey' => sesskey(),
+    ]);
+
+    echo '<link rel="stylesheet" type="text/css" href="../styles.css" media="screen" />';
+    echo '<div id="wait">' . $loadinghtml . '</div>';
+    echo '<script>';
+    echo 'require(["jquery"], function($) {';
+    echo '  $.ajax({';
+    echo '    data: ' . $params . ',';
+    echo '    type: "POST",';
+    echo '    url: "./load.php",';
+    echo '    success: function(data) {';
+    echo '      document.location.href = JSON.parse(data).urlG;';
+    echo '    }';
+    echo '  });';
+    echo '});';
+    echo '</script>';
 } else {
-    if ($instancesavailables > 0 || computerStartedByUser($userid, $imageid) != null) {
-        echo "<div id = wait></div>";
-        echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"../styles.css\" media=\"screen\" />";
-
-
-        $startstr = get_string('starting', 'guacamole');
-        $redirectstr = get_string('redirectedfewminutes', 'guacamole');
-        $loadingimg = "<p style=\"text-align:center;\"><img src=\"../loading.gif\"/></p>";
-        $loadingh3 = "<h3 style=\"text-align:center;\">" . $startstr . "</h3>";
-        $loadingp = "<p style=\"text-align:center;\">" . $redirectstr . "</p>";
-        $loadinghtml = $loadingimg . $loadingh3 . $loadingp;
-        echo "<script type=\"text/javascript\">";
-        echo "$(document).ready(function() {";
-        // Load the loading image into the container.
-        echo "$('#wait').html('<br><br><br><br>');";
-        echo "$('#wait').html('" . $loadinghtml . "');";
-        echo "$('#content').html('" . $loadinghtml . "');";
-        echo          "var parametros = {\"img\" : \"" . $imageid . "\",";
-        echo                            "\"usr\" : \"" . $userid . "\",";
-        echo                            "\"id\" : \"" . $id . "\",";
-        echo                            "\"gu\" : \"" . $gu . "\",";
-        echo                            "\"comp\" : \"" . $computerid . "\",";
-        echo                            "\"sesskey\" : " . json_encode(sesskey()) . ",";
-        echo                            "};";
-        echo          "$.ajax({";
-        echo              "data: parametros,";
-        echo              "type: \"POST\",";
-        echo              "url: \"./load.php\",";
-        echo              "success: function(data) {";
-        echo                  "var respuesta = JSON.parse(data);";
-        echo                    "document.location.href = respuesta.urlG";
-        echo              "}";
-        echo          "});";
-        echo          "return false;";
-        echo  "});";
-        echo "</script>";
-    } else {
-        // No se puede crear, máximo alcanzado
-        echo ('<br><br><br><br>');
-        echo "<h3 style=\"text-align:center;\">" . get_string('noavailable', 'guacamole') . "</h3>";
-    }
+    echo '<br><br><br><br>';
+    echo '<h3 style="text-align:center;">' . get_string('noavailable', 'guacamole') . '</h3>';
 }
+
+echo $OUTPUT->footer();
