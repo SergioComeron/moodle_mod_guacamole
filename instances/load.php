@@ -149,19 +149,9 @@ try {
         $espera = $CFG->guacamole_seconds_wait;
     }
 
-    subirFileJson();
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    $service = new Google_Service_Compute($client);
-
-    $project  = $CFG->guacamole_project_cloud;
-    $zone     = $CFG->guacamole_zone_cloud;
-    $idconnect = obtenerIdInstanciaGuacamole($computername);
-    $type     = 'c';
+    $type = 'c';
     $database = 'mysql';
-    $str      = $idconnect . "\0" . $type . "\0" . $database;
+    $str      = $guaidconnection . "\0" . $type . "\0" . $database;
     $urlg     = $CFG->guacamole_domain . '/guacamole/#/client/' . base64_encode($str);
     startinstance($computername);
 
