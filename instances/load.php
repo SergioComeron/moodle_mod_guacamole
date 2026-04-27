@@ -45,6 +45,9 @@ if ($userid !== (int)$USER->id) {
 
 $PAGE->set_url('/mod/guacamole/start.php');
 
+// Allow enough time for VM startup + Guacamole API calls.
+set_time_limit(180);
+
 try {
 
 $user      = $DB->get_record('user', ['id' => $userid]);
