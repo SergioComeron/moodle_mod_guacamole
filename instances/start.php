@@ -75,15 +75,11 @@ if ($stateblocked) {
     echo '<link rel="stylesheet" type="text/css" href="../styles.css" media="screen" />';
     echo '<div id="wait">' . $loadinghtml . '</div>';
     echo '<script>';
-    echo 'require(["jquery"], function($) {';
-    echo '  $.ajax({';
-    echo '    data: ' . $params . ',';
-    echo '    type: "POST",';
-    echo '    url: "./load.php",';
-    echo '    success: function(data) {';
-    echo '      document.location.href = JSON.parse(data).urlG;';
-    echo '    }';
-    echo '  });';
+    echo 'document.addEventListener("DOMContentLoaded", function() {';
+    echo '  var params = new URLSearchParams(' . $params . ');';
+    echo '  fetch("./load.php", {method: "POST", body: params})';
+    echo '    .then(function(r) { return r.json(); })';
+    echo '    .then(function(data) { document.location.href = data.urlG; });';
     echo '});';
     echo '</script>';
 } else {
