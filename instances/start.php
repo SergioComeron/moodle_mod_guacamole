@@ -74,7 +74,10 @@ echo '       justify-content:center; min-height:100vh; }';
 echo '.card { background:#fff; border-radius:12px;';
 echo '        box-shadow:0 4px 24px rgba(0,0,0,.10);';
 echo '        padding:3rem 2.5rem; max-width:480px; width:90%; text-align:center; }';
-echo '.icon { font-size:2.5rem; margin-bottom:1rem; }';
+echo '.spinner { width:56px; height:56px; border-radius:50%;';
+echo '           border:5px solid #e8edf2; border-top-color:#0f6cbf;';
+echo '           animation:spin 1s linear infinite; margin:0 auto 1.5rem; }';
+echo '@keyframes spin { to { transform:rotate(360deg); } }';
 echo 'h1 { font-size:1.3rem; font-weight:600; color:#1a2b3c; margin-bottom:.5rem; }';
 echo '.msg { color:#6b7c93; font-size:.95rem; margin-bottom:2rem;';
 echo '       min-height:1.4em; transition:opacity .3s; }';
@@ -88,7 +91,7 @@ echo '.error { color:#c0392b; font-size:.95rem; margin-top:1.5rem; display:none;
 echo '</style>';
 echo '</head><body>';
 echo '<div class="card">';
-echo '<div class="icon">🖥️</div>';
+echo '<div class="spinner"></div>';
 echo '<h1>' . s($title) . '</h1>';
 
 if ($stateblocked) {
