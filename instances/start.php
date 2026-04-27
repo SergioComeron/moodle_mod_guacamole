@@ -114,6 +114,8 @@ if ($stateblocked) {
     ]);
     $loadurl   = json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php');
     $statusurl = json_encode($CFG->wwwroot . '/mod/guacamole/instances/status.php');
+    $waittime  = (int)($CFG->guacamole_seconds_wait ?? 30);
+    $readymsg  = get_string('vm_ready', 'guacamole');
 
     echo '<script>';
     echo 'var bar=document.getElementById("bar");';
@@ -121,6 +123,7 @@ if ($stateblocked) {
     echo 'var pct=document.getElementById("pct");';
     echo 'var urlG=null;';
     echo 'var progress=0;';
+    echo 'var waitSecs=' . $waittime . ';';
 
     echo 'function setProgress(p,text){';
     echo '  progress=Math.min(p,100);';
@@ -150,11 +153,21 @@ if ($stateblocked) {
     echo '    .then(function(d){';
     echo '      if(d.message){setProgress(Math.min(progress+3,92),d.message);}';
     echo '      if(d.ready){';
-    echo '        setProgress(100,d.message);';
-    echo '        setTimeout(function(){document.location.href=urlG;},600);';
+    echo '        setProgress(92,' . json_encode($readymsg) . ');';
+    echo '        startCountdown();';
     echo '      } else {setTimeout(pollStatus,5000);}';
     echo '    })';
     echo '    .catch(function(){setTimeout(pollStatus,5000);});';
+    echo '}';
+
+    echo 'function startCountdown(){';
+    echo '  var remaining=waitSecs;';
+    echo '  var step=8/waitSecs;'; // fill from 92% to 100% over waitSecs seconds.
+    echo '  var cd=setInterval(function(){';
+    echo '    remaining--;';
+    echo '    setProgress(Math.min(progress+step));';
+    echo '    if(remaining<=0){clearInterval(cd);document.location.href=urlG;}';
+    echo '  },1000);';
     echo '}';
 
     echo 'var loadParams=new URLSearchParams(' . $params . ');';
