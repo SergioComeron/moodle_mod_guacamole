@@ -114,30 +114,14 @@ function createinstance($imageid, $userid) {
     $imagedisk = $image->cloudimage;
     $newdisk->setSourceImage('https://www.googleapis.com/compute/v1/projects/' . $CFG->guacamole_project_cloud . '/global/images/' . $imagedisk);
 
-    // añado el disco al proyecto
-    try {
-        $insertdiskoperation = $service->disks->insert($project, $zone, $newdisk);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $insertdiskoperation->getName()
-            ) > 0
-        ) {
-            exit('Error inserting disk.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error añadiendo el disco " . $disk, "Exception: " . $e);
-        }
+    $insertdiskoperation = $service->disks->insert($project, $zone, $newdisk);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $insertdiskoperation->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error inserting disk: ' . $instancia);
     }
 
-    // Le digo que es booteable
     $bootdisk = $service->disks->get($project, $zone, $instancia);
-    if (!("READY" == $bootdisk->getStatus())) {
-        exit("Disk creation didn't succeed.");
+    if ("READY" !== $bootdisk->getStatus()) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', "Disk not ready after insert: " . $instancia);
     }
 
     $primarydisk = new Google_Service_Compute_AttachedDisk();
@@ -148,23 +132,9 @@ function createinstance($imageid, $userid) {
     $primarydisk->setType("PERSISTENT");
     $instance->setDisks([$primarydisk]);
 
-    try {
-        $response = $service->instances->insert($project, $zone, $instance);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $response->getName()
-            ) > 0
-        ) {
-            exit('Error inserting instance.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error creando la instancia: " . $instance, "Exception: " . $e);
-        }
+    $response = $service->instances->insert($project, $zone, $instance);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error inserting instance: ' . $instancia);
     }
 }
 
@@ -205,23 +175,9 @@ function deleteinstance($instance) {
     $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
-    try {
-        $response = $service->instances->delete($project, $zone, $instance);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $response->getName()
-            ) > 0
-        ) {
-            exit('Error deleting instance.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error eliminando la instancia: " . $instance, "Exception: " . $e);
-        }
+    $response = $service->instances->delete($project, $zone, $instance);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error deleting instance: ' . $instance);
     }
 }
 
@@ -235,23 +191,9 @@ function deletedisk($disk) {
     $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
-    try {
-        $response = $service->disks->delete($project, $zone, $disk);
-        if (
-            waitForZoneOperationCompletion(
-                $service,
-                $project,
-                $zone,
-                $response->getName()
-            ) > 0
-        ) {
-            exit('Error deleting disk.');
-        }
-    } catch (Exception $e) {
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            email_to_user($admin, $admin, "Error eliminando el disco: " . $instance, "Exception: " . $e);
-        }
+    $response = $service->disks->delete($project, $zone, $disk);
+    if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
+        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error deleting disk: ' . $disk);
     }
 }
 
@@ -261,8 +203,6 @@ function deletedisk($disk) {
  * @param string $instancia The instance name to stop.
  */
 function stopinstance($instancia) {
-    require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
-    global $CFG, $DB;
     deleteInstance($instancia);
     deleteDisk($instancia);
 }
