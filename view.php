@@ -210,13 +210,13 @@ $alerthtml = '<div class=\"alert alert-danger\" role=\"alert\">' . get_string('o
 $alerthtml .= '<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">';
 $alerthtml .= '<span aria-hidden=\"true\">&times;</span></button></div>' . $CFG->guacamole_help;
 echo        "$('#region-main').html('" . $alerthtml . "');";
-echo        "window.open('" . $url . "', '_blank');";
+echo        "window.open(" . json_encode($url) . ", '_blank');";
 echo    "});";
 echo "</script>";
 echo "<script>";
 echo    "$('.button2').on('click', function(){";
 echo        "$('#region-main').html('" . $alerthtml . "');";
-echo        "window.open('" . $urlant . "', '_blank');";
+echo        "window.open(" . json_encode($urlant) . ", '_blank');";
 echo    "});";
 echo "</script>";
 
