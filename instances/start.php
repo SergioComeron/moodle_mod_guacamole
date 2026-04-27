@@ -77,7 +77,7 @@ if ($stateblocked) {
     echo '<script>';
     echo 'document.addEventListener("DOMContentLoaded", function() {';
     echo '  var params = new URLSearchParams(' . $params . ');';
-    echo '  fetch("./load.php", {method: "POST", body: params})';
+    echo '  fetch(' . json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php') . ', {method: "POST", body: params})';
     echo '    .then(function(r) { return r.json(); })';
     echo '    .then(function(data) { document.location.href = data.urlG; });';
     echo '});';
