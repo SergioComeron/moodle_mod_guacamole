@@ -102,7 +102,8 @@ if (empty($computers)) {
     $table->attributes['class'] = 'generaltable table-sm';
 
     foreach ($computers as $computer) {
-        $user = $DB->get_record('user', ['id' => $computer->userid], 'id,username,firstname,lastname');
+        $user = $DB->get_record('user', ['id' => $computer->userid],
+            'id,username,firstname,lastname,firstnamephonetic,lastnamephonetic,middlename,alternatename');
         $username = $user
             ? html_writer::link(
                 new moodle_url('/user/profile.php', ['id' => $user->id]),
