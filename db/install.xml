@@ -65,6 +65,7 @@
       </KEYS>
       <INDEXES>
         <INDEX NAME="timetodelete" UNIQUE="false" FIELDS="timetodelete"/>
+        <INDEX NAME="state_root" UNIQUE="false" FIELDS="state, root"/>
       </INDEXES>
     </TABLE>
 

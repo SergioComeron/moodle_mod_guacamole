@@ -88,7 +88,8 @@ function createinstance($imageid, $userid) {
     // Le doy un nombre
     $instance->setName($instancia);
     // Le pongo un tipo de instancia
-    $instance->setMachineType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/machineTypes/n2d-custom-2-6144');
+    $machinetype = $CFG->guacamole_machine_type ?? 'n2d-custom-2-6144';
+    $instance->setMachineType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/machineTypes/' . $machinetype);
     // Le pongo una interfaz de red
     $googlenetworkinterface = new Google_Service_Compute_NetworkInterface();
     $googlenetworkinterface->setNetwork('projects/' . $CFG->guacamole_project_cloud . '/global/networks/default');
@@ -109,7 +110,8 @@ function createinstance($imageid, $userid) {
     $newdisk->setName($instancia);
 
     // Cambia el tipo de disco aquí
-    $newdisk->setType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/diskTypes/pd-ssd');
+    $disktype = $CFG->guacamole_disk_type ?? 'pd-ssd';
+    $newdisk->setType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/diskTypes/' . $disktype);
 
     $imagedisk = $image->cloudimage;
     $newdisk->setSourceImage('https://www.googleapis.com/compute/v1/projects/' . $CFG->guacamole_project_cloud . '/global/images/' . $imagedisk);

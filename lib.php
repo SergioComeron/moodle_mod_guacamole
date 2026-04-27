@@ -490,18 +490,12 @@ function obtenerlaboratorios() {
  * @return int Count of active computers.
  */
 function getcomputersused($image) {
-    global $CFG, $DB;
-    $computersused = 0;
-    $guacamolecomputers = $DB->get_records('guacamole_computers', []);
-    foreach ($guacamolecomputers as $guacamolecomputer) {
-        $isstarted = ($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'started') == 0);
-        $isloading = ($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'loading') == 0);
-        $isshutdown = ($guacamolecomputer->imageid == $image && strcmp($guacamolecomputer->state, 'shutdown') == 0);
-        if ($isstarted || $isloading || $isshutdown) {
-            $computersused += 1;
-        }
-    }
-    return $computersused;
+    global $DB;
+    return (int) $DB->count_records_select(
+        'guacamole_computers',
+        'imageid = ? AND state IN (?,?,?)',
+        [$image, 'started', 'loading', 'shutdown']
+    );
 }
 
 /**

@@ -119,6 +119,10 @@ $string['userpass'] = 'Contraseña usuario guacamole';
 $string['youcandeleteifyouwish'] = 'Si lo desea, puede eliminar su máquina actual que ha creado e iniciar una desde la nueva imagen, pero tenga en cuenta que todo lo que no esté guardado en la unidad de disco "Guacamole" se perderá.';
 
 $string['gcperror'] = 'Error de Google Cloud: {$a}';
+$string['gcpmachinetype'] = 'Tipo de máquina GCP';
+$string['gcpmachinetypeex'] = 'Tipo de máquina de Google Cloud Compute Engine (p. ej. n2d-custom-2-6144)';
+$string['gcpdisktype'] = 'Tipo de disco GCP';
+$string['gcpdisktypeex'] = 'Tipo de disco persistente de Google Cloud (p. ej. pd-ssd, pd-balanced, pd-standard)';
 $string['guacamoleautherror'] = 'No se ha podido conectar con el servicio de máquinas virtuales. Por favor, inténtelo de nuevo más tarde o contacte con el administrador.';
 
 $string['vm_creating']   = 'Creando la máquina virtual (puede tardar unos minutos)…';
