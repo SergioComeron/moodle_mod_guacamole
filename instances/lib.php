@@ -30,6 +30,30 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/mod/guacamole/instances/google-api-php-client-2.2.1/vendor/autoload.php');
 
 /**
+ * Returns a Google_Client configured with auth and a hard HTTP timeout.
+ *
+ * Every GCP API call goes through Guzzle — without a timeout the PHP process
+ * can hang indefinitely if the network stalls. 60 s per request is generous
+ * enough for any single Compute Engine operation while still bounding the
+ * worst-case hang time.
+ *
+ * @return Google_Client
+ */
+function guacamole_gcp_client() {
+    global $CFG;
+    subirFileJson();
+    $client = new Google_Client();
+    $client->setApplicationName('Pruebas');
+    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
+    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
+    $client->setHttpClient(new \GuzzleHttp\Client([
+        'connect_timeout' => 10,
+        'timeout'         => 60,
+    ]));
+    return $client;
+}
+
+/**
  * Uploads the JSON service-account key file to the Moodle temp directory.
  */
 function subirfilejson() {
@@ -54,16 +78,7 @@ function createinstance($imageid, $userid) {
     $computername = $image->cloudimage . '-' . $image->id . '-' . $user->id;
     $instancia = strtolower($computername);
 
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
 
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
@@ -163,15 +178,7 @@ function existdisk($diskname) {
     global $CFG;
     $diskname = strtolower($diskname);
     $exist = false;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
@@ -195,15 +202,7 @@ function existdisk($diskname) {
  */
 function deleteinstance($instance) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
     try {
@@ -233,15 +232,7 @@ function deleteinstance($instance) {
  */
 function deletedisk($disk) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
     try {
@@ -283,15 +274,7 @@ function stopinstance($instancia) {
  */
 function stopvm($instance) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
@@ -314,16 +297,7 @@ function stopvm($instance) {
 function existinstance($instance) {
     global $CFG;
     $exist = false;
-
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
@@ -359,12 +333,7 @@ function obtainimagename($instance) {
  */
 function getinstancestatus($instance) {
     global $CFG;
-    subirFileJson();
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     try {
         $inst = $service->instances->get(
             $CFG->guacamole_project_cloud,
@@ -385,15 +354,7 @@ function getinstancestatus($instance) {
  */
 function startinstance($instance) {
     global $CFG;
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->useApplicationDefaultCredentials();
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    subirFileJson();
-
-    $client->setAuthConfig($CFG->dataroot  . '/temp/auth.json');
-
-    $service = new Google_Service_Compute($client);
+    $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
 
