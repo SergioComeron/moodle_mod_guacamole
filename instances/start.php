@@ -80,12 +80,19 @@ if ($stateblocked) {
     ]);
 
     echo '<div id="wait">' . $loadinghtml . '</div>';
+    $errmsg = get_string('guacamoleautherror', 'mod_guacamole');
+    echo '<div id="error-msg" style="display:none;text-align:center;color:red;padding:2em;">'
+        . s($errmsg) . '</div>';
     echo '<script>';
     echo 'document.addEventListener("DOMContentLoaded", function() {';
     echo '  var params = new URLSearchParams(' . $params . ');';
     echo '  fetch(' . json_encode($CFG->wwwroot . '/mod/guacamole/instances/load.php') . ', {method: "POST", body: params})';
-    echo '    .then(function(r) { return r.json(); })';
-    echo '    .then(function(data) { document.location.href = data.urlG; });';
+    echo '    .then(function(r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })';
+    echo '    .then(function(data) { document.location.href = data.urlG; })';
+    echo '    .catch(function() {';
+    echo '      document.getElementById("wait").style.display = "none";';
+    echo '      document.getElementById("error-msg").style.display = "block";';
+    echo '    });';
     echo '});';
     echo '</script>';
 } else {
