@@ -65,16 +65,16 @@ $PAGE->set_url($baseurl);
 
 if ($deletecomputerid && confirm_sesskey()) {
     $guacamolecomputer = $DB->get_record('guacamole_computers', ['id' => $deletecomputerid]);
-    while ($guacamolecomputer->state == 'loading' || $guacamolecomputer->state == 'loading') {
-        $guacamolecomputer = $DB->get_record('guacamole_computers', ['id' => $deletecomputerid]);
-        sleep(1);
+    if ($guacamolecomputer) {
+        // Remove Guacamole connection immediately (fast API call).
+        if (!empty($guacamolecomputer->guaidconnection)) {
+            eliminarConexion($guacamolecomputer->guaidconnection);
+        }
+        // Mark for deletion — cron_task_delete will handle GCP cleanup asynchronously.
+        $guacamolecomputer->state = 'deleting';
+        $DB->update_record('guacamole_computers', $guacamolecomputer);
     }
-    $guacamolecomputer->state = 'deleting';
-    $DB->update_record('guacamole_computers', $guacamolecomputer);
-    eliminarConexion($guacamolecomputer->guaidconnection);
-    stopinstance($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
-    $DB->delete_records('guacamole_computers', ['id' => $deletecomputerid]);
-    redirect($PAGE->url, get_string('imagedeleted', 'guacamole'));
+    redirect($PAGE->url, get_string('deletingscheduled', 'guacamole'));
 }
 
 $strmanage = get_string('showimages', 'guacamole');
