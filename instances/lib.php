@@ -386,7 +386,8 @@ function waitforzoneoperationcompletion(
     $zone,
     $operation
 ) {
-    for ($x = 0; $x <= 20; $x++) {
+    $deadline = time() + 600; // 10-minute wall-clock limit.
+    for ($x = 0; $x <= 20 && time() < $deadline; $x++) {
         $operationstatus = $computeservice->zoneOperations->get(
             $project,
             $zone,
@@ -395,7 +396,7 @@ function waitforzoneoperationcompletion(
         if ("DONE" == $operationstatus->getStatus()) {
             return 0;
         }
-        sleep((2 * $x));
+        sleep(min(2 * $x, $deadline - time()));
     }
     return 1;
 }
