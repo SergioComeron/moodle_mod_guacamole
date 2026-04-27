@@ -338,7 +338,7 @@ function guacamole_get_token() {
     $res = curl_exec($ch);
     curl_close($ch);
     $data = json_decode($res, true);
-    if (empty($data['authToken'])) {
+    if (!is_array($data) || empty($data['authToken'])) {
         throw new moodle_exception('guacamoleautherror', 'mod_guacamole');
     }
     return $data['authToken'];
