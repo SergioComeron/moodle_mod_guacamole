@@ -102,6 +102,7 @@ $string['secondswait'] = 'Segundos de espera';
 $string['secondswaitex'] = 'Segundos de retardo al lanzar un laboratorio';
 $string['showimages'] = 'Ver imágenes';
 $string['sourceimage'] = 'Source image url from cloud';
+$string['deletecomputerconfirm'] = '¿Estás seguro de que quieres eliminar esta máquina?';
 $string['deleteimageconfirm'] = 'Estas seguro de eliminar esta máquina?';
 $string['start'] = 'Iniciar la máquina virtual';
 $string['starting'] = 'Por favor espere, la máquina se está iniciando';
