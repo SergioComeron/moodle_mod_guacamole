@@ -45,6 +45,9 @@ if ($userid !== (int)$USER->id) {
 
 $PAGE->set_url('/mod/guacamole/start.php');
 
+// createInstance() blocks waiting for GCP disk+VM operations (can take minutes).
+set_time_limit(0);
+
 try {
     $user      = $DB->get_record('user', ['id' => $userid]);
     $guacamole = $DB->get_record('guacamole', ['id' => $gu]);
