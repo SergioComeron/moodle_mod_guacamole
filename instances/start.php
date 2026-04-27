@@ -69,6 +69,7 @@ if ($guacamolecomputer != null && ($guacamolecomputer->state == 'deleting' || $g
         echo                            "\"id\" : \"" . $id . "\",";
         echo                            "\"gu\" : \"" . $gu . "\",";
         echo                            "\"comp\" : \"" . $computerid . "\",";
+        echo                            "\"sesskey\" : " . json_encode(sesskey()) . ",";
         echo                            "};";
         echo          "$.ajax({";
         echo              "data: parametros,";
