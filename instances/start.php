@@ -43,6 +43,7 @@ $PAGE->set_url('/mod/guacamole/instances/start.php', [
     'id' => $id, 'img' => $imageid, 'usr' => $userid, 'gu' => $gu, 'comp' => $computerid,
 ]);
 $PAGE->set_context($context);
+$PAGE->set_pagelayout('embedded');
 $PAGE->set_title(get_string('modulename', 'guacamole'));
 
 $guacamoleimage    = $DB->get_record('guacamole_images', ['id' => $imageid]);
