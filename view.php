@@ -78,7 +78,6 @@ $instancesavailables = $guacamoleimage->maxnuminstances - getComputersUsed($imag
 $guacamolecomputer = null;
 $url = null;
 $urlant = null;
-$vmisstarted = false;
 $computerstarted = computerStartedByUser($userid, $imageid);
 if ($computerstarted != null) {
     // Su máquina ya se está ejecutando
@@ -99,7 +98,6 @@ if ($computerstarted != null) {
         echo "<p><b>" . get_string('imagename', 'guacamole') . "</b>: " . $computerstarted->cloudimage . "</p>";
         echo "<p><b>" . get_string('state', 'guacamole') . "</b>: " . $computerstarted->state . "</p>";
         echo "<button type=\"button\" class=\"btn btn-primary button\">" . get_string('openvirtualmachine', 'guacamole') . "</button>";
-        $vmisstarted = true;
         $guacamolecomputer = $computerstarted;
         $imageid = $guacamolecomputer->imageid;
         $url = './instances/start.php?img=' . $imageid . '&usr=' . $userid . '&id=' . $id . '&gu=' . $guacamole->id . '&comp=' . $guacamolecomputer->id;
@@ -125,11 +123,7 @@ if ($computerstarted != null) {
             }
         } else {
             // Hay una creada
-            if ($guacamolecomputer->state == 'loading') {
-                echo "<div class=\"alert alert-info\" role=\"alert\">";
-                echo get_string('trylater', 'guacamole');
-                echo "</div>";
-            } else if ($guacamolecomputer->state != 'deleting') {
+            if ($guacamolecomputer->state != 'deleting') {
                 if ($guacamoleimage->active == 1) {
                     if ($guacamoleimage->cloudimage == $guacamolecomputer->cloudimage) {
                         echo "<div id=box style=\"border-style:solid; border-width: 1px; padding: 10px; border: 1px solid Gainsboro; border-radius: 5px; line-height: 0.7;\">";
@@ -210,40 +204,20 @@ echo "<br>";
 echo "<h2>" . get_string('help', 'moodle') . "</h2>";
 echo $CFG->guacamole_help;
 
-$noticemsg     = get_string('openinnewtab', 'guacamole');
-$loadingmsg    = get_string('trylater', 'guacamole');
-$reopenmsg     = get_string('openvirtualmachine', 'guacamole');
-$vmisstartedjson = $vmisstarted ? 'true' : 'false';
-
-echo '<div id="guac-notice" style="display:none;margin-top:1rem;" class="alert alert-info" role="alert">';
-echo '  <span id="guac-notice-text"></span>';
-echo '  <a id="guac-reopen" href="#" target="_blank" class="alert-link" style="display:none;margin-left:.5rem;">';
-echo '    ' . s($reopenmsg) . ' ↗';
-echo '  </a>';
-echo '</div>';
 echo "<script>";
-echo "var vmIsStarted=" . $vmisstartedjson . ";";
-echo "var noticemsg=" . json_encode($noticemsg) . ";";
-echo "var loadingmsg=" . json_encode($loadingmsg) . ";";
-echo "function guacOpenTab(u){";
-echo "  var notice=document.getElementById('guac-notice');";
-echo "  var noticeText=document.getElementById('guac-notice-text');";
-echo "  var reopen=document.getElementById('guac-reopen');";
-echo "  if(vmIsStarted){";
-echo "    noticeText.textContent=noticemsg;";
-echo "    reopen.href=u;";
-echo "    reopen.style.display='inline';";
-echo "  } else {";
-echo "    noticeText.textContent=loadingmsg;";
-echo "    reopen.style.display='none';";
-echo "    var btn=document.querySelector('.button');";
-echo "    if(btn){btn.disabled=true;btn.classList.add('disabled');}";
-echo "  }";
-echo "  notice.style.display='block';";
-echo "  window.open(u,'_blank');";
-echo "}";
-echo "document.querySelector('.button') && document.querySelector('.button').addEventListener('click',function(){guacOpenTab(" . json_encode($url) . ");});";
-echo "document.querySelector('.button2') && document.querySelector('.button2').addEventListener('click',function(){guacOpenTab(" . json_encode($urlant) . ");});";
+echo    "$('.button').on('click', function(){";
+$alerthtml = '<div class=\"alert alert-danger\" role=\"alert\">' . get_string('openinnewtab', 'guacamole');
+$alerthtml .= '<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\">';
+$alerthtml .= '<span aria-hidden=\"true\">&times;</span></button></div>' . $CFG->guacamole_help;
+echo        "$('#region-main').html('" . $alerthtml . "');";
+echo        "window.open(" . json_encode($url) . ", '_blank');";
+echo    "});";
+echo "</script>";
+echo "<script>";
+echo    "$('.button2').on('click', function(){";
+echo        "$('#region-main').html('" . $alerthtml . "');";
+echo        "window.open(" . json_encode($urlant) . ", '_blank');";
+echo    "});";
 echo "</script>";
 
 echo $OUTPUT->footer();
