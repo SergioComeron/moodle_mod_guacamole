@@ -123,6 +123,6 @@ $string['vm_creating']  = 'Creando la máquina virtual (puede tardar unos minuto
 $string['vm_preparing'] = 'Preparando el entorno…';
 $string['vm_staging']   = 'Iniciando la máquina virtual…';
 $string['vm_running']   = 'Conectando con el escritorio virtual…';
-$string['vm_ready']     = '¡Listo! Redirigiendo…';
+$string['vm_ready']     = 'Validando servicio de escritorio remoto…';
 $string['vm_title']          = 'Iniciando máquina virtual';
 $string['deletingscheduled'] = 'La máquina ha sido marcada para eliminación y se borrará en breve.';

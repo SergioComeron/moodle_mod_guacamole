@@ -125,6 +125,6 @@ $string['vm_creating']  = 'Creating virtual machine (this may take a few minutes
 $string['vm_preparing'] = 'Preparing environment…';
 $string['vm_staging']   = 'Starting virtual machine…';
 $string['vm_running']   = 'Connecting to virtual desktop…';
-$string['vm_ready']     = 'Ready! Redirecting…';
+$string['vm_ready']     = 'Validating remote desktop service…';
 $string['vm_title']          = 'Starting virtual machine';
 $string['deletingscheduled'] = 'The machine has been marked for deletion and will be removed shortly.';
