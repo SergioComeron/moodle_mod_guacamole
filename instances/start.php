@@ -54,9 +54,10 @@ $guacamolecomputer   = $DB->get_record('guacamole_computers', ['id' => $computer
 $stateblocked = $guacamolecomputer != null &&
     in_array($guacamolecomputer->state, ['deleting', 'loading', 'shutdown']);
 
-$title    = get_string('vm_title', 'guacamole');
-$creating = get_string('vm_creating', 'guacamole');
-$errmsg   = get_string('guacamoleautherror', 'mod_guacamole');
+$title       = get_string('vm_title', 'guacamole');
+$creating    = get_string('vm_creating', 'guacamole');
+$restarting  = get_string('vm_restarting', 'guacamole');
+$errmsg      = get_string('guacamoleautherror', 'mod_guacamole');
 $trylater = get_string('trylater', 'guacamole');
 $noavail  = get_string('noavailable', 'guacamole');
 
@@ -93,6 +94,7 @@ echo '<h1>' . s($title) . '</h1>';
 if ($stateblocked) {
     echo '<p class="msg">' . s($trylater) . '</p>';
 } else if ($instancesavailables > 0 || computerStartedByUser($userid, $imageid) != null) {
+    // Initial message shown before load.php responds (unknown if new or restart).
     echo '<p class="msg" id="status-msg">' . s($creating) . '</p>';
     echo '<div class="bar-wrap"><div class="bar" id="bar"></div></div>';
     echo '<div class="pct" id="pct">0%</div>';
@@ -123,7 +125,8 @@ if ($stateblocked) {
     echo 'var pct=document.getElementById("pct");';
     echo 'var urlG=null;';
     echo 'var progress=0;';
-    echo 'var waitSecs=' . $waittime . ';';
+    echo 'var waitSecs=0;'; // Overridden by load.php response.
+    echo 'var msgRestarting=' . json_encode($restarting) . ';';
 
     echo 'function setProgress(p,text){';
     echo '  progress=Math.min(p,100);';
@@ -177,8 +180,10 @@ if ($stateblocked) {
     echo '    if(data.error){throw new Error(data.error);}';
     echo '    clearInterval(phase1);';
     echo '    urlG=data.urlG;';
-    echo '    setProgress(55);';
-    echo '    setTimeout(pollStatus,5000);';
+    echo '    waitSecs=data.waitSecs||0;';
+    echo '    if(!data.isNew){setProgress(55,msgRestarting);}else{setProgress(55);}';
+    echo '    if(data.waitSecs===0){setProgress(100);setTimeout(function(){document.location.href=urlG;},600);}';
+    echo '    else{setTimeout(pollStatus,5000);}';
     echo '  })';
     echo '  .catch(function(e){showError(e&&e.message?e.message:null);});';
     echo '</script>';

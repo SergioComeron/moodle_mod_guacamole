@@ -121,7 +121,8 @@ $string['youcandeleteifyouwish'] = 'If you wish you can delete the current machi
 
 $string['guacamoleautherror'] = 'Could not connect to the virtual machine service. Please try again later or contact your administrator.';
 
-$string['vm_creating']  = 'Creating virtual machine (this may take a few minutes)…';
+$string['vm_creating']   = 'Creating virtual machine (this may take a few minutes)…';
+$string['vm_restarting'] = 'Restarting virtual machine…';
 $string['vm_preparing'] = 'Preparing environment…';
 $string['vm_staging']   = 'Starting virtual machine…';
 $string['vm_running']   = 'Connecting to virtual desktop…';
