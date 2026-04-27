@@ -400,7 +400,10 @@ function fechadesconexion($instancia) {
     $token = guacamole_get_token();
     $history = guacamole_api_request($token, '/guacamole/api/session/data/mysql/history/connections?order=-startDate');
     foreach ($history as $entry) {
-        if ($entry['connectionName'] === $instancia && !empty($entry['endDate'])) {
+        if (!is_array($entry)) {
+            continue;
+        }
+        if (($entry['connectionName'] ?? '') === $instancia && !empty($entry['endDate'])) {
             return (int) ($entry['endDate'] / 1000);
         }
     }
