@@ -373,7 +373,8 @@ function guacamole_api_request($token, $endpoint, $method = 'GET', $body = null,
     }
     $res = curl_exec($ch);
     curl_close($ch);
-    return json_decode($res, true) ?? [];
+    $decoded = json_decode($res, true);
+    return is_array($decoded) ? $decoded : [];
 }
 
 /**
