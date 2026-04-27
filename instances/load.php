@@ -91,6 +91,9 @@ try {
         $computername  = strtolower($computername);
         crearUsuario($user->username);
         $guaidconnection = crearConexion($image->id, $user->id, $computername);
+        if (empty($guaidconnection)) {
+            $guaidconnection = obtenerIdInstanciaGuacamole($computername);
+        }
         darPermiso($guaidconnection, $user->username);
 
         $guacamolecomputer                  = $DB->get_record('guacamole_computers', ['imageid' => $image->id, 'userid' => $user->id]);
@@ -120,10 +123,13 @@ try {
         }
 
         $oldstate = $guacamolecomputer->state;
-        if ($guacamolecomputer->state != 'started') {
-            $guaidconnection = crearConexion($image->id, $user->id, $computername);
-        } else {
+        if (!empty($guacamolecomputer->guaidconnection)) {
             $guaidconnection = $guacamolecomputer->guaidconnection;
+        } else {
+            $guaidconnection = crearConexion($image->id, $user->id, $computername);
+            if (empty($guaidconnection)) {
+                $guaidconnection = obtenerIdInstanciaGuacamole($computername);
+            }
         }
 
         $guacamolecomputer->state          = 'loading';
