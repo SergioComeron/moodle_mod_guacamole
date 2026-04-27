@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Script to let a user manage their RSS feeds.
+ * Admin page to manage all virtual machine instances.
  *
  * @package    mod_guacamole
  * @copyright  2019 Sergio Comerón Sánchez-Paniagua <sergiocomeron@icloud.com>
@@ -24,53 +24,25 @@
 
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/tablelib.php');
-require_once('./instances/lib.php');
-require_once('./lib.php');
+require_once(__DIR__ . '/instances/lib.php');
+require_once(__DIR__ . '/lib.php');
 
 require_login();
+$context = context_system::instance();
+require_capability('mod/guacamole:manageimages', $context);
 
-$returnurl = optional_param('returnurl', '', PARAM_LOCALURL);
-$courseid = optional_param('courseid', 0, PARAM_INT);
 $deletecomputerid = optional_param('deletecomputerid', 0, PARAM_INT);
 
-if ($courseid == SITEID) {
-    $courseid = 0;
-}
-if ($courseid) {
-    $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
-    $PAGE->set_course($course);
-    $context = $PAGE->context;
-} else {
-    $context = context_system::instance();
-    $PAGE->set_context($context);
-}
-
-$managesharedfeeds = has_capability('block/rss_client:manageanyfeeds', $context);
-if (!$managesharedfeeds) {
-    require_capability('block/rss_client:manageownfeeds', $context);
-}
-
-$urlparams = [];
-$extraparams = '';
-if ($courseid) {
-    $urlparams['courseid'] = $courseid;
-    $extraparams = '&courseid=' . $courseid;
-}
-if ($returnurl) {
-    $urlparams['returnurl'] = $returnurl;
-    $extraparams = '&returnurl=' . $returnurl;
-}
-$baseurl = new moodle_url('/mod/guacamole/showimages.php', $urlparams);
+$baseurl = new moodle_url('/mod/guacamole/showimages.php');
 $PAGE->set_url($baseurl);
+$PAGE->set_context($context);
 
 if ($deletecomputerid && confirm_sesskey()) {
     $guacamolecomputer = $DB->get_record('guacamole_computers', ['id' => $deletecomputerid]);
     if ($guacamolecomputer) {
-        // Remove Guacamole connection immediately (fast API call).
         if (!empty($guacamolecomputer->guaidconnection)) {
             eliminarConexion($guacamolecomputer->guaidconnection);
         }
-        // Mark for deletion — cron_task_delete will handle GCP cleanup asynchronously.
         $guacamolecomputer->state = 'deleting';
         $DB->update_record('guacamole_computers', $guacamolecomputer);
     }
@@ -78,33 +50,97 @@ if ($deletecomputerid && confirm_sesskey()) {
 }
 
 $strmanage = get_string('showimages', 'guacamole');
-
 $PAGE->set_pagelayout('standard');
 $PAGE->set_title($strmanage);
 $PAGE->set_heading($strmanage);
-
-$showimages = new moodle_url('/mod/guacamole/showimages.php', $urlparams);
 $PAGE->navbar->add(get_string('mod', 'guacamole'));
 $PAGE->navbar->add(get_string('modulename', 'guacamole'));
-$PAGE->navbar->add(get_string('showimages', 'guacamole'), $showimages);
+$PAGE->navbar->add($strmanage, $baseurl);
+
 echo $OUTPUT->header();
+echo $OUTPUT->heading($strmanage);
 
-$table = new html_table();
-$table->head = ['Nombre', 'Estado', get_string('actions', 'moodle')];
-$computers = $DB->get_records('guacamole_computers', []);
+$datefmt = get_string('strftimedatetimeshort', 'langconfig');
 
-foreach ($computers as $computer) {
-    $deleteurl = new moodle_url('/mod/guacamole/showimages.php?deletecomputerid=' . $computer->id . '&sesskey=' . sesskey());
-    $deleteicon = new pix_icon('t/delete', get_string('delete'));
-    $deleteaction = $OUTPUT->action_icon($deleteurl, $deleteicon, new confirm_action(get_string('deleteimageconfirm', 'guacamole')));
-    $imageicons = $deleteaction;
+$statebadge = [
+    'started'  => 'badge badge-success',
+    'loading'  => 'badge badge-warning',
+    'stopped'  => 'badge badge-secondary',
+    'deleting' => 'badge badge-danger',
+    'shutdown' => 'badge badge-info',
+];
 
+$computers = $DB->get_records('guacamole_computers', [], 'timelaststart DESC');
 
-    $table->data[] = [$computer->cloudimage . '-' . $computer->imageid . '-' . $computer->userid, $computer->state, $imageicons];
+// Summary counters.
+$counts = [];
+foreach ($computers as $c) {
+    $counts[$c->state] = ($counts[$c->state] ?? 0) + 1;
 }
-echo html_writer::table($table);
 
+echo html_writer::start_div('mb-3', ['style' => 'display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center']);
+echo html_writer::tag('strong', get_string('total') . ': ' . count($computers));
+foreach ($statebadge as $state => $class) {
+    if (!empty($counts[$state])) {
+        echo html_writer::tag('span', $counts[$state] . ' ' . $state, ['class' => $class]);
+    }
+}
+echo html_writer::end_div();
 
+if (empty($computers)) {
+    echo $OUTPUT->notification(get_string('nothingtodisplay', 'moodle'), 'notifymessage');
+} else {
+    $table = new html_table();
+    $table->head = [
+        get_string('imagename', 'guacamole'),
+        get_string('username', 'moodle'),
+        get_string('state', 'guacamole'),
+        get_string('datecreation', 'guacamole'),
+        get_string('laststart', 'guacamole'),
+        get_string('datetodelete', 'guacamole'),
+        get_string('actions', 'moodle'),
+    ];
+    $table->attributes['class'] = 'generaltable table-sm';
 
+    foreach ($computers as $computer) {
+        $user = $DB->get_record('user', ['id' => $computer->userid], 'id,username,firstname,lastname');
+        $username = $user
+            ? html_writer::link(
+                new moodle_url('/user/profile.php', ['id' => $user->id]),
+                fullname($user) . ' (' . $user->username . ')'
+              )
+            : '(userid ' . $computer->userid . ')';
+
+        $vmname = $computer->cloudimage . '-' . $computer->imageid . '-' . $computer->userid;
+
+        $badge = $statebadge[$computer->state] ?? 'badge badge-light';
+        $statecell = html_writer::tag('span', s($computer->state), ['class' => $badge]);
+
+        $datecreated   = $computer->timecreated  ? userdate($computer->timecreated,  $datefmt) : '-';
+        $datelaststart = $computer->timelaststart ? userdate($computer->timelaststart, $datefmt) : '-';
+        $datetodelete  = $computer->timetodelete  ? userdate($computer->timetodelete,  $datefmt) : '-';
+
+        $deleteurl = new moodle_url('/mod/guacamole/showimages.php', [
+            'deletecomputerid' => $computer->id,
+            'sesskey'          => sesskey(),
+        ]);
+        $deleteaction = $OUTPUT->action_icon(
+            $deleteurl,
+            new pix_icon('t/delete', get_string('delete')),
+            new confirm_action(get_string('deleteimageconfirm', 'guacamole'))
+        );
+
+        $table->data[] = [
+            s($vmname),
+            $username,
+            $statecell,
+            $datecreated,
+            $datelaststart,
+            $datetodelete,
+            $deleteaction,
+        ];
+    }
+    echo html_writer::table($table);
+}
 
 echo $OUTPUT->footer();

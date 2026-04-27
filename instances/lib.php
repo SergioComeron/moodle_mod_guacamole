@@ -43,7 +43,7 @@ function guacamole_gcp_client() {
     global $CFG;
     subirFileJson();
     $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
+    $client->setApplicationName('mod_guacamole');
     $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
     $client->addScope('https://www.googleapis.com/auth/cloud-platform');
     $client->setHttpClient(new \GuzzleHttp\Client([
