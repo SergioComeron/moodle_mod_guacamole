@@ -51,32 +51,12 @@ class cron_task extends \core\task\scheduled_task {
     public function execute() {
         global $CFG, $DB;
 
-        $ch = curl_init($CFG->guacamole_domain . "/guacamole/api/tokens");
-        $nombredeusuario = $CFG->guacamole_user;
-        $parametros = 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password;
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, 'username=' . $nombredeusuario . '&password=' . $CFG->guacamole_password);
+        $token = guacamole_get_token();
+        $activeconnections = guacamole_api_request($token, '/guacamole/api/session/data/mysql/activeConnections');
 
-        $res = curl_exec($ch);
-        $var = json_decode($res, true);
-        curl_close($ch);
-
-        $tokens = $var['authToken'];
-
-        $ch = curl_init($CFG->guacamole_domain . "/guacamole/api/session/data/mysql/activeConnections?token=" . $tokens);
-
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        $res = curl_exec($ch);
-        curl_close($ch);
-
-        $var = json_decode($res, true);
-        $users = array_column($var, 'username');
-        $connections = array_column($var, 'connectionIdentifier');
+        // activeConnections returns a JSON object (map), not an array — convert to sequential array.
+        $activeconnections = array_values($activeconnections ?: []);
+        $connections = array_column($activeconnections, 'connectionIdentifier');
 
         $guacamolecomputers = $DB->get_records('guacamole_computers', ['state' => 'started', 'root' => $CFG->wwwroot]);
         foreach ($guacamolecomputers as $guacamolecomputer) {
