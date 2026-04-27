@@ -108,7 +108,7 @@ if (empty($computers)) {
             ? html_writer::link(
                 new moodle_url('/user/profile.php', ['id' => $user->id]),
                 fullname($user) . ' (' . $user->username . ')'
-              )
+            )
             : '(userid ' . $computer->userid . ')';
 
         $vmname = $computer->cloudimage . '-' . $computer->imageid . '-' . $computer->userid;
@@ -116,9 +116,9 @@ if (empty($computers)) {
         $badge = $statebadge[$computer->state] ?? 'badge badge-light';
         $statecell = html_writer::tag('span', s($computer->state), ['class' => $badge]);
 
-        $datecreated   = $computer->timecreated  ? userdate($computer->timecreated,  $datefmt) : '-';
+        $datecreated   = $computer->timecreated ? userdate($computer->timecreated, $datefmt) : '-';
         $datelaststart = $computer->timelaststart ? userdate($computer->timelaststart, $datefmt) : '-';
-        $datetodelete  = $computer->timetodelete  ? userdate($computer->timetodelete,  $datefmt) : '-';
+        $datetodelete  = $computer->timetodelete ? userdate($computer->timetodelete, $datefmt) : '-';
 
         $deleteurl = new moodle_url('/mod/guacamole/showimages.php', [
             'deletecomputerid' => $computer->id,

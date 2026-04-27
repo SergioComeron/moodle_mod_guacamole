@@ -87,8 +87,10 @@ class cron_task extends \core\task\scheduled_task {
             $DB->update_record('guacamole_computers', $guacamolecomputer);
 
             // Skip machines with an active Guacamole session.
-            if (!empty($guacamolecomputer->guaidconnection) &&
-                    in_array($guacamolecomputer->guaidconnection, $connections)) {
+            if (
+                !empty($guacamolecomputer->guaidconnection) &&
+                    in_array($guacamolecomputer->guaidconnection, $connections)
+            ) {
                 continue;
             }
 
