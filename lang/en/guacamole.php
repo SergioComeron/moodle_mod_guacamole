@@ -120,6 +120,10 @@ $string['imagename'] = 'Image name';
 $string['youcandeleteifyouwish'] = 'If you wish you can delete the current machine that you have created and start a new one from the new image, but keep in mind that everything that is not saved in the disk drive "Guacamole" will be lost.';
 
 $string['gcperror'] = 'Google Cloud error: {$a}';
+$string['gcpmachinetype'] = 'GCP machine type';
+$string['gcpmachinetypeex'] = 'Google Cloud Compute Engine machine type (e.g. n2d-custom-2-6144)';
+$string['gcpdisktype'] = 'GCP disk type';
+$string['gcpdisktypeex'] = 'Google Cloud persistent disk type (e.g. pd-ssd, pd-balanced, pd-standard)';
 $string['guacamoleautherror'] = 'Could not connect to the virtual machine service. Please try again later or contact your administrator.';
 
 $string['vm_creating']   = 'Creating virtual machine (this may take a few minutes)…';

@@ -28,8 +28,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_guacamole';
-$plugin->version = 2024070102;
-$plugin->release = 'v1.5';
+$plugin->version = 2024070103;
+$plugin->release = 'v1.6';
 $plugin->requires = 2022041900;
 $plugin->maturity = MATURITY_STABLE;
 $plugin->cron = 0;

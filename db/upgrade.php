@@ -94,5 +94,14 @@ function xmldb_guacamole_upgrade($oldversion) {
      *
      * Finally, return of upgrade result (true, all went good) to Moodle.
      */
+    if ($oldversion < 2024070103) {
+        $table = new xmldb_table('guacamole_computers');
+        $index = new xmldb_index('state_root', XMLDB_INDEX_NOTUNIQUE, ['state', 'root']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+        upgrade_mod_savepoint(true, 2024070103, 'guacamole');
+    }
+
     return true;
 }
