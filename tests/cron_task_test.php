@@ -124,6 +124,131 @@ final class cron_task_test extends \advanced_testcase {
     }
 
     /**
+     * A loading computer older than 30 minutes qualifies for orphan cleanup.
+     */
+    public function test_orphaned_loading_older_than_30min_qualifies_for_cleanup(): void {
+        global $DB, $CFG;
+
+        $user = $this->getDataGenerator()->create_user();
+        $now = time();
+
+        $computer = new \stdClass();
+        $computer->imageid = $this->image->id;
+        $computer->userid = $user->id;
+        $computer->cloudimage = 'test-image';
+        $computer->guaidconnection = null;
+        $computer->state = 'loading';
+        $computer->timecreated = $now - 3600;
+        $computer->timelaststart = $now - 1801; // Older than 30 min.
+        $computer->timelaststop = 0;
+        $computer->minutestoshutdown = 30;
+        $computer->daystodelete = 3;
+        $computer->timetodelete = $now + 3 * 86400;
+        $computer->root = $CFG->wwwroot;
+        $DB->insert_record('guacamole_computers', $computer);
+
+        $loadingstale = $now - 1800;
+        $stalled = $DB->get_records_select(
+            'guacamole_computers',
+            'state = ? AND root = ? AND timelaststart < ?',
+            ['loading', $CFG->wwwroot, $loadingstale]
+        );
+
+        $this->assertCount(1, $stalled);
+    }
+
+    /**
+     * A loading computer newer than 30 minutes must NOT be cleaned up.
+     */
+    public function test_loading_newer_than_30min_does_not_qualify_for_cleanup(): void {
+        global $DB, $CFG;
+
+        $user = $this->getDataGenerator()->create_user();
+        $now = time();
+
+        $computer = new \stdClass();
+        $computer->imageid = $this->image->id;
+        $computer->userid = $user->id;
+        $computer->cloudimage = 'test-image';
+        $computer->guaidconnection = null;
+        $computer->state = 'loading';
+        $computer->timecreated = $now;
+        $computer->timelaststart = $now - 600; // Only 10 min ago.
+        $computer->timelaststop = 0;
+        $computer->minutestoshutdown = 30;
+        $computer->daystodelete = 3;
+        $computer->timetodelete = $now + 3 * 86400;
+        $computer->root = $CFG->wwwroot;
+        $DB->insert_record('guacamole_computers', $computer);
+
+        $loadingstale = $now - 1800;
+        $stalled = $DB->get_records_select(
+            'guacamole_computers',
+            'state = ? AND root = ? AND timelaststart < ?',
+            ['loading', $CFG->wwwroot, $loadingstale]
+        );
+
+        $this->assertCount(0, $stalled);
+    }
+
+    /**
+     * A started computer with null guaidconnection is still eligible for shutdown checks.
+     */
+    public function test_started_computer_with_null_guaidconnection_is_processable(): void {
+        global $DB, $CFG;
+
+        $user = $this->getDataGenerator()->create_user();
+        $now = time();
+
+        $computer = new \stdClass();
+        $computer->imageid = $this->image->id;
+        $computer->userid = $user->id;
+        $computer->cloudimage = 'test-image';
+        $computer->guaidconnection = null;
+        $computer->state = 'started';
+        $computer->timecreated = $now - 7200;
+        $computer->timelaststart = $now - 7200;
+        $computer->timelaststop = 0;
+        $computer->minutestoshutdown = 30;
+        $computer->daystodelete = 3;
+        $computer->timetodelete = $now + 3 * 86400;
+        $computer->root = $CFG->wwwroot;
+        $DB->insert_record('guacamole_computers', $computer);
+
+        $started = $DB->get_records('guacamole_computers', ['state' => 'started', 'root' => $CFG->wwwroot]);
+        $this->assertCount(1, $started);
+        $this->assertNull(reset($started)->guaidconnection);
+    }
+
+    /**
+     * A computer in deleting state is picked up for manual-deletion processing.
+     */
+    public function test_deleting_state_computer_is_eligible_for_processing(): void {
+        global $DB, $CFG;
+
+        $user = $this->getDataGenerator()->create_user();
+        $now = time();
+
+        $computer = new \stdClass();
+        $computer->imageid = $this->image->id;
+        $computer->userid = $user->id;
+        $computer->cloudimage = 'test-image';
+        $computer->guaidconnection = null;
+        $computer->state = 'deleting';
+        $computer->timecreated = $now - 86400;
+        $computer->timelaststart = $now - 86400;
+        $computer->timelaststop = $now - 3600;
+        $computer->minutestoshutdown = 30;
+        $computer->daystodelete = 3;
+        $computer->timetodelete = $now - 3600;
+        $computer->root = $CFG->wwwroot;
+        $DB->insert_record('guacamole_computers', $computer);
+
+        $pending = $DB->get_records('guacamole_computers', ['state' => 'deleting', 'root' => $CFG->wwwroot]);
+        $this->assertCount(1, $pending);
+    }
+
+    /**
      * Only computers belonging to the current wwwroot should be processed.
      */
     public function test_cron_ignores_computers_from_other_root(): void {
