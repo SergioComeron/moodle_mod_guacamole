@@ -60,10 +60,11 @@ class cron_task extends \core\task\scheduled_task {
 
         $guacamolecomputers = $DB->get_records('guacamole_computers', ['state' => 'started', 'root' => $CFG->wwwroot]);
         foreach ($guacamolecomputers as $guacamolecomputer) {
-            echo ($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+            $computername = strtolower($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+            mtrace($computername);
             $timelaststart = $guacamolecomputer->timelaststart;
             $timedesconection = 0;
-            $timedesconection = fechaDesconexion($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+            $timedesconection = fechaDesconexion($computername);
             $timetostop = $timedesconection + $guacamolecomputer->minutestoshutdown * 60;
             $today = time();
             $guacamolecomputer->timetodelete = $today + ($guacamolecomputer->daystodelete * 60 * 60 * 24);
@@ -79,12 +80,12 @@ class cron_task extends \core\task\scheduled_task {
                         quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
                         eliminarConexion($guacamolecomputer->guaidconnection);
 
-                        stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                        stopvm($computername);
                         $guacamolecomputer->guaidconnection = null;
                         $guacamolecomputer->state = 'stopped';
                         $guacamolecomputer->timelaststop = $today;
                         $DB->update_record('guacamole_computers', $guacamolecomputer);
-                        echo "....parada";
+                        mtrace('....parada');
                     }
                 } else {
                     if ($timetostop < $today) {
@@ -94,12 +95,12 @@ class cron_task extends \core\task\scheduled_task {
                         quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
                         eliminarConexion($guacamolecomputer->guaidconnection);
 
-                        stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                        stopvm($computername);
                         $guacamolecomputer->guaidconnection = null;
                         $guacamolecomputer->state = 'stopped';
                         $guacamolecomputer->timelaststop = $today;
                         $DB->update_record('guacamole_computers', $guacamolecomputer);
-                        echo "....parada";
+                        mtrace('....parada');
                     } else {
                         if ($timedesconection == 0) {
                             $timetostop = $timelaststart + $guacamolecomputer->minutestoshutdown * 60 + 120;
@@ -112,12 +113,12 @@ class cron_task extends \core\task\scheduled_task {
                                 quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
                                 eliminarConexion($guacamolecomputer->guaidconnection);
 
-                                stopvm($guacamolecomputer->cloudimage . '-' . $guacamolecomputer->imageid . '-' . $guacamolecomputer->userid);
+                                stopvm($computername);
                                 $guacamolecomputer->guaidconnection = null;
                                 $guacamolecomputer->state = 'stopped';
                                 $guacamolecomputer->timelaststop = $today;
                                 $DB->update_record('guacamole_computers', $guacamolecomputer);
-                                echo "....parada";
+                                mtrace('....parada');
                             }
                         }
                     }

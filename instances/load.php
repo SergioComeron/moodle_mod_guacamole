@@ -132,7 +132,7 @@ try {
             }
         }
 
-        $guacamolecomputer->state          = 'loading';
+        $guacamolecomputer->state          = ($oldstate === 'started') ? 'started' : 'loading';
         $guacamolecomputer->timelaststart  = $timestarted;
         $guacamolecomputer->guaidconnection = $guaidconnection;
         if ($guacamole->daystodelete > $guacamolecomputer->daystodelete) {
