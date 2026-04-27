@@ -48,13 +48,22 @@ $user    = $DB->get_record('user', ['id' => $userid]);
 $computername = strtolower($image->cloudimage . '-' . $image->id . '-' . $user->id);
 $gcpstatus    = getinstancestatus($computername);
 
+$messages = [
+    'STAGING'    => get_string('vm_staging', 'guacamole'),
+    'RUNNING'    => get_string('vm_running', 'guacamole'),
+    'STOPPING'   => get_string('vm_preparing', 'guacamole'),
+    'TERMINATED' => get_string('vm_preparing', 'guacamole'),
+    ''           => get_string('vm_preparing', 'guacamole'),
+];
+$message = $messages[$gcpstatus] ?? get_string('vm_preparing', 'guacamole');
+
 if ($gcpstatus === 'RUNNING') {
     $guacamolecomputer = $DB->get_record('guacamole_computers', ['imageid' => $imageid, 'userid' => $userid]);
     if ($guacamolecomputer && $guacamolecomputer->state !== 'started') {
         $guacamolecomputer->state = 'started';
         $DB->update_record('guacamole_computers', $guacamolecomputer);
     }
-    echo json_encode(['ready' => true]);
+    echo json_encode(['ready' => true, 'message' => get_string('vm_ready', 'guacamole')]);
 } else {
-    echo json_encode(['ready' => false, 'status' => $gcpstatus]);
+    echo json_encode(['ready' => false, 'status' => $gcpstatus, 'message' => $message]);
 }

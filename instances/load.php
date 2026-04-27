@@ -45,6 +45,9 @@ if ($userid !== (int)$USER->id) {
 
 $PAGE->set_url('/mod/guacamole/start.php');
 
+// createInstance() blocks waiting for GCP disk+VM operations (can take minutes).
+set_time_limit(0);
+
 try {
     $user      = $DB->get_record('user', ['id' => $userid]);
     $guacamole = $DB->get_record('guacamole', ['id' => $gu]);
@@ -88,6 +91,9 @@ try {
         $computername  = strtolower($computername);
         crearUsuario($user->username);
         $guaidconnection = crearConexion($image->id, $user->id, $computername);
+        if (empty($guaidconnection)) {
+            $guaidconnection = obtenerIdInstanciaGuacamole($computername);
+        }
         darPermiso($guaidconnection, $user->username);
 
         $guacamolecomputer                  = $DB->get_record('guacamole_computers', ['imageid' => $image->id, 'userid' => $user->id]);
@@ -117,10 +123,13 @@ try {
         }
 
         $oldstate = $guacamolecomputer->state;
-        if ($guacamolecomputer->state != 'started') {
-            $guaidconnection = crearConexion($image->id, $user->id, $computername);
-        } else {
+        if (!empty($guacamolecomputer->guaidconnection)) {
             $guaidconnection = $guacamolecomputer->guaidconnection;
+        } else {
+            $guaidconnection = crearConexion($image->id, $user->id, $computername);
+            if (empty($guaidconnection)) {
+                $guaidconnection = obtenerIdInstanciaGuacamole($computername);
+            }
         }
 
         $guacamolecomputer->state          = 'loading';
@@ -140,30 +149,29 @@ try {
         $DB->update_record('guacamole_computers', $guacamolecomputer);
     }
 
-    if (strcmp($oldstate, 'started') == 0) {
-        $espera = 1;
+    // Determine wait time: new VM needs full wait, restart half, already running = 0.
+    $isnew = ($oldstate === 'stopped' && !existInstance($computername));
+    if ($oldstate === 'started') {
+        $waitsecs = 0;
+    } else if ($isnew) {
+        $waitsecs = (int)$CFG->guacamole_seconds_wait;
     } else {
-        $espera = $CFG->guacamole_seconds_wait;
+        $waitsecs = (int)($CFG->guacamole_seconds_wait / 2);
     }
 
-    subirFileJson();
-    $client = new Google_Client();
-    $client->setApplicationName('Pruebas');
-    $client->setAuthConfig($CFG->dataroot . '/temp/auth.json');
-    $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-    $service = new Google_Service_Compute($client);
-
-    $project  = $CFG->guacamole_project_cloud;
-    $zone     = $CFG->guacamole_zone_cloud;
-    $idconnect = obtenerIdInstanciaGuacamole($computername);
     $type     = 'c';
     $database = 'mysql';
-    $str      = $idconnect . "\0" . $type . "\0" . $database;
+    $str      = $guaidconnection . "\0" . $type . "\0" . $database;
     $urlg     = $CFG->guacamole_domain . '/guacamole/#/client/' . base64_encode($str);
-    startinstance($computername);
 
-    $varr         = [];
-    $varr['urlG'] = $urlg;
+    if ($oldstate !== 'started') {
+        startinstance($computername);
+    }
+
+    $varr             = [];
+    $varr['urlG']     = $urlg;
+    $varr['isNew']    = $isnew;
+    $varr['waitSecs'] = $waitsecs;
     echo json_encode($varr);
 } catch (Throwable $e) {
     http_response_code(200);

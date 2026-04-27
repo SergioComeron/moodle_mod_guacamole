@@ -118,3 +118,12 @@ $string['userpass'] = 'Contraseña usuario guacamole';
 $string['youcandeleteifyouwish'] = 'Si lo desea, puede eliminar su máquina actual que ha creado e iniciar una desde la nueva imagen, pero tenga en cuenta que todo lo que no esté guardado en la unidad de disco "Guacamole" se perderá.';
 
 $string['guacamoleautherror'] = 'No se ha podido conectar con el servicio de máquinas virtuales. Por favor, inténtelo de nuevo más tarde o contacte con el administrador.';
+
+$string['vm_creating']   = 'Creando la máquina virtual (puede tardar unos minutos)…';
+$string['vm_restarting'] = 'Reiniciando la máquina virtual…';
+$string['vm_preparing'] = 'Preparando el entorno…';
+$string['vm_staging']   = 'Iniciando la máquina virtual…';
+$string['vm_running']   = 'Conectando con el escritorio virtual…';
+$string['vm_ready']     = 'Validando servicio de escritorio remoto…';
+$string['vm_title']          = 'Iniciando máquina virtual';
+$string['deletingscheduled'] = 'La máquina ha sido marcada para eliminación y se borrará en breve.';
