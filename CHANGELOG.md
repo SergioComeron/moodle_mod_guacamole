@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.7] - 2026-05-04
+
+### Correcciones
+- correct multi-line function call format in showimages.php (PHPCS)
+- include all name fields in user query for fullname() in showimages.php
+
+### Otros cambios
+- release: bump to v1.7 and update build date to 2026050401
+- chore: add Composer cleanup script to keep only Compute service
+
+
 ## [v1.6] - 2026-04-27
 
 ### Nuevas funcionalidades
