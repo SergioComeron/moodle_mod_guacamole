@@ -177,7 +177,14 @@ function deleteinstance($instance) {
     $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
-    $response = $service->instances->delete($project, $zone, $instance);
+    try {
+        $response = $service->instances->delete($project, $zone, $instance);
+    } catch (Google_Service_Exception $e) {
+        if ($e->getCode() === 404) {
+            return;
+        }
+        throw $e;
+    }
     if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
         throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error deleting instance: ' . $instance);
     }
@@ -193,7 +200,14 @@ function deletedisk($disk) {
     $service = new Google_Service_Compute(guacamole_gcp_client());
     $project = $CFG->guacamole_project_cloud;
     $zone = $CFG->guacamole_zone_cloud;
-    $response = $service->disks->delete($project, $zone, $disk);
+    try {
+        $response = $service->disks->delete($project, $zone, $disk);
+    } catch (Google_Service_Exception $e) {
+        if ($e->getCode() === 404) {
+            return;
+        }
+        throw $e;
+    }
     if (waitForZoneOperationCompletion($service, $project, $zone, $response->getName()) > 0) {
         throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error deleting disk: ' . $disk);
     }
