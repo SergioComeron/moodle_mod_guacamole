@@ -150,7 +150,8 @@ try {
     }
 
     // Determine wait time: new VM needs full wait, restart half, already running = 0.
-    $isnew = ($oldstate === 'stopped' && !existInstance($computername));
+    $instanceexists = existInstance($computername);
+    $isnew = ($oldstate === 'stopped' && !$instanceexists);
     if ($oldstate === 'started') {
         $waitsecs = 0;
     } else if ($isnew) {
@@ -165,7 +166,26 @@ try {
     $urlg     = $CFG->guacamole_domain . '/guacamole/#/client/' . base64_encode($str);
 
     if ($oldstate !== 'started') {
-        startinstance($computername);
+        if ($instanceexists) {
+            startinstance($computername);
+        } else {
+            // Disk exists but VM was deleted from GCP (e.g. manual deletion from console).
+            // Recreate the VM from the existing disk and refresh the Guacamole connection.
+            if (!empty($guaidconnection)) {
+                eliminarConexion($guaidconnection);
+            }
+            createInstance($image->id, $user->id);
+            $guaidconnection = crearConexion($image->id, $user->id, $computername);
+            if (empty($guaidconnection)) {
+                $guaidconnection = obtenerIdInstanciaGuacamole($computername);
+            }
+            darPermiso($guaidconnection, $user->username);
+            $gcrecord = $DB->get_record('guacamole_computers', ['imageid' => $image->id, 'userid' => $user->id]);
+            $gcrecord->guaidconnection = $guaidconnection;
+            $DB->update_record('guacamole_computers', $gcrecord);
+            $str  = $guaidconnection . "\0" . $type . "\0" . $database;
+            $urlg = $CFG->guacamole_domain . '/guacamole/#/client/' . base64_encode($str);
+        }
     }
 
     $varr             = [];

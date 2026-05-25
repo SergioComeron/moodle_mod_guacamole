@@ -104,21 +104,17 @@ function createinstance($imageid, $userid) {
     $instance->setNetworkInterfaces([$googlenetworkinterface]);
     // Le pongo un disco
 
-    // Creo un disco
-    $newdisk = new Google_Service_Compute_Disk();
-    // Le doy un nombre al disco
-    $newdisk->setName($instancia);
-
-    // Cambia el tipo de disco aquí
-    $disktype = $CFG->guacamole_disk_type ?? 'pd-ssd';
-    $newdisk->setType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/diskTypes/' . $disktype);
-
-    $imagedisk = $image->cloudimage;
-    $newdisk->setSourceImage('https://www.googleapis.com/compute/v1/projects/' . $CFG->guacamole_project_cloud . '/global/images/' . $imagedisk);
-
-    $insertdiskoperation = $service->disks->insert($project, $zone, $newdisk);
-    if (waitForZoneOperationCompletion($service, $project, $zone, $insertdiskoperation->getName()) > 0) {
-        throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error inserting disk: ' . $instancia);
+    if (!existdisk($instancia)) {
+        $newdisk = new Google_Service_Compute_Disk();
+        $newdisk->setName($instancia);
+        $disktype = $CFG->guacamole_disk_type ?? 'pd-ssd';
+        $newdisk->setType('projects/' . $CFG->guacamole_project_cloud . '/zones/' . $CFG->guacamole_zone_cloud . '/diskTypes/' . $disktype);
+        $imagedisk = $image->cloudimage;
+        $newdisk->setSourceImage('https://www.googleapis.com/compute/v1/projects/' . $CFG->guacamole_project_cloud . '/global/images/' . $imagedisk);
+        $insertdiskoperation = $service->disks->insert($project, $zone, $newdisk);
+        if (waitForZoneOperationCompletion($service, $project, $zone, $insertdiskoperation->getName()) > 0) {
+            throw new moodle_exception('gcperror', 'mod_guacamole', '', 'Error inserting disk: ' . $instancia);
+        }
     }
 
     $bootdisk = $service->disks->get($project, $zone, $instancia);
