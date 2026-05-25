@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.8] - 2026-05-25
+
+### Correcciones
+- recover VM when disk exists but GCP instance was manually deleted
+- handle GCP 404 gracefully in deleteinstance and deletedisk
+
+### Otros cambios
+- release: bump to v1.8 and update build date to 2026052501
+
+
 ## [v1.7] - 2026-05-04
 
 ### Correcciones
