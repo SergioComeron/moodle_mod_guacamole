@@ -95,6 +95,10 @@ class ManagedInstance extends \Google\Collection
    */
   public const INSTANCE_STATUS_PENDING = 'PENDING';
   /**
+   * The instance is gracefully shutting down.
+   */
+  public const INSTANCE_STATUS_PENDING_STOP = 'PENDING_STOP';
+  /**
    * Resources are being allocated for the instance.
    */
   public const INSTANCE_STATUS_PROVISIONING = 'PROVISIONING';
@@ -195,6 +199,10 @@ class ManagedInstance extends \Google\Collection
   protected $preservedStateFromPolicyDataType = '';
   protected $propertiesFromFlexibilityPolicyType = ManagedInstancePropertiesFromFlexibilityPolicy::class;
   protected $propertiesFromFlexibilityPolicyDataType = '';
+  protected $schedulingType = ManagedInstanceScheduling::class;
+  protected $schedulingDataType = '';
+  protected $shutdownDetailsType = ManagedInstanceShutdownDetails::class;
+  protected $shutdownDetailsDataType = '';
   protected $versionType = ManagedInstanceVersion::class;
   protected $versionDataType = '';
 
@@ -291,8 +299,9 @@ class ManagedInstance extends \Google\Collection
    * Output only. [Output Only] The status of the instance. This field is empty
    * when the instance does not exist.
    *
-   * Accepted values: DEPROVISIONING, PENDING, PROVISIONING, REPAIRING, RUNNING,
-   * STAGING, STOPPED, STOPPING, SUSPENDED, SUSPENDING, TERMINATED
+   * Accepted values: DEPROVISIONING, PENDING, PENDING_STOP, PROVISIONING,
+   * REPAIRING, RUNNING, STAGING, STOPPED, STOPPING, SUSPENDED, SUSPENDING,
+   * TERMINATED
    *
    * @param self::INSTANCE_STATUS_* $instanceStatus
    */
@@ -391,6 +400,40 @@ class ManagedInstance extends \Google\Collection
   public function getPropertiesFromFlexibilityPolicy()
   {
     return $this->propertiesFromFlexibilityPolicy;
+  }
+  /**
+   * Output only. Information about the termination timestamp of the instance,
+   * if applicable.
+   *
+   * @param ManagedInstanceScheduling $scheduling
+   */
+  public function setScheduling(ManagedInstanceScheduling $scheduling)
+  {
+    $this->scheduling = $scheduling;
+  }
+  /**
+   * @return ManagedInstanceScheduling
+   */
+  public function getScheduling()
+  {
+    return $this->scheduling;
+  }
+  /**
+   * Output only. Specifies the graceful shutdown details if the instance is in
+   * `PENDING_STOP` state or there is a programmed stop scheduled.
+   *
+   * @param ManagedInstanceShutdownDetails $shutdownDetails
+   */
+  public function setShutdownDetails(ManagedInstanceShutdownDetails $shutdownDetails)
+  {
+    $this->shutdownDetails = $shutdownDetails;
+  }
+  /**
+   * @return ManagedInstanceShutdownDetails
+   */
+  public function getShutdownDetails()
+  {
+    return $this->shutdownDetails;
   }
   /**
    * Output only. [Output Only] Intended version of this instance.
