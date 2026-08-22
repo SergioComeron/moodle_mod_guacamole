@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.9] - 2026-08-22
+
+### Correcciones
+- upgrade guzzle, psr7, and phpseclib to close GHSA alerts
+
+### Otros cambios
+- release: bump to v1.9 and update build date to 2026082200
+- release: bump to v1.8 and update build date to 2026052501
+- chore(deps): bump google/apiclient
+
+
 ## [v1.8] - 2026-05-25
 
 ### Correcciones
