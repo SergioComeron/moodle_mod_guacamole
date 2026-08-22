@@ -1,6 +1,9 @@
 {
     "require": {
-        "google/apiclient": "^2.19.0",
+        "google/apiclient": "^2.19.4",
+        "guzzlehttp/guzzle": "^7.15.2",
+        "guzzlehttp/psr7": "^2.12.3",
+        "phpseclib/phpseclib": "^3.0.54",
         "php": "^8.1"
     },
     "scripts": {
