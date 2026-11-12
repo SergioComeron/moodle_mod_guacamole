@@ -94,6 +94,7 @@ $string['modulename'] = 'Guacamole';
 $string['modulename_help'] = 'Use the guacamole module for virtual lab';
 $string['modulenameplural'] = 'Guacamoles';
 $string['noavailable'] = 'You can not create and start your machine now because we have reached the maximum allowed for machines like this. This is because there are other students who are now using them. Check back later to see if resources have already been released. Sorry for the disturbances.';
+$string['noidcusername'] = 'This account has no Entra ID username, so the virtual machine cannot be opened.';
 $string['notice'] = 'Notice';
 $string['numberfreelab'] = 'Number of free laboratories: ';
 $string['numberofinstances'] = 'Default max number of instances';

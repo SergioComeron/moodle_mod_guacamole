@@ -93,6 +93,7 @@ $string['modulename'] = 'Guacamole';
 $string['modulename_help'] = 'Usar el módulo guacamole para laboratorios virtuales';
 $string['modulenameplural'] = 'Guacamoles';
 $string['noavailable'] = 'No puede crear e iniciar su máquina ahora porque hemos alcanzado el máximo permitido para máquinas como esta. Esto se debe a que hay otros estudiantes que ahora las están usando. Vuelva más tarde para ver si ya se han liberado recursos. Disculpe las molestias.';
+$string['noidcusername'] = 'Esta cuenta no tiene usuario de Entra ID, así que no se puede abrir la máquina virtual.';
 $string['notice'] = 'Aviso';
 $string['numberfreelab'] = 'Número de laboratorios libres: ';
 $string['numberofinstances'] = 'Máximo número de instancias';

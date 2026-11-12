@@ -109,12 +109,20 @@ class cron_task extends \core\task\scheduled_task {
                 continue;
             }
 
+            // Resolve the Entra ID username before changing state. A failure here
+            // leaves the machine started so the next run can retry.
+            try {
+                $oidcusername = guacamole_oidc_username($guacamolecomputer->userid);
+            } catch (\moodle_exception $e) {
+                mtrace('....' . $e->getMessage());
+                continue;
+            }
+
             $guacamolecomputer->state = 'shutdown';
             $DB->update_record('guacamole_computers', $guacamolecomputer);
 
-            $user = $DB->get_record('user', ['id' => $guacamolecomputer->userid]);
             if (!empty($guacamolecomputer->guaidconnection)) {
-                quitarPermiso($guacamolecomputer->guaidconnection, $user->username);
+                quitarPermiso($guacamolecomputer->guaidconnection, $oidcusername);
                 eliminarConexion($guacamolecomputer->guaidconnection);
             }
 

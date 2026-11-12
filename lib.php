@@ -610,6 +610,30 @@ function quitarpermiso($instance, $user) {
 }
 
 /**
+ * Returns the Entra ID username that identifies this user in Guacamole.
+ *
+ * Guacamole authenticates with the same account used to log in to Moodle.
+ * That account is auth_oidc_token.oidcusername. A user may have several token
+ * rows, one per resource; the newest non-empty oidcusername is used.
+ *
+ * @param int $userid The Moodle user id.
+ * @return string The OIDC username.
+ * @throws moodle_exception If the user has no OIDC username.
+ */
+function guacamole_oidc_username($userid) {
+    global $DB;
+
+    $tokens = $DB->get_records('auth_oidc_token', ['userid' => $userid], 'id DESC', 'id, oidcusername');
+    foreach ($tokens as $token) {
+        if (!empty($token->oidcusername)) {
+            return $token->oidcusername;
+        }
+    }
+
+    throw new moodle_exception('noidcusername', 'mod_guacamole');
+}
+
+/**
  * Creates a new Guacamole user via the REST API.
  *
  * @param string $user The username to create in Guacamole.

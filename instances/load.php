@@ -50,6 +50,7 @@ set_time_limit(0);
 
 try {
     $user      = $DB->get_record('user', ['id' => $userid]);
+    $guacuser  = guacamole_oidc_username($userid);
     $guacamole = $DB->get_record('guacamole', ['id' => $gu]);
     $image     = $DB->get_record('guacamole_images', ['id' => $imageid]);
 
@@ -89,12 +90,12 @@ try {
 
         createInstance($image->id, $user->id);
         $computername  = strtolower($computername);
-        crearUsuario($user->username);
+        crearUsuario($guacuser);
         $guaidconnection = crearConexion($image->id, $user->id, $computername);
         if (empty($guaidconnection)) {
             $guaidconnection = obtenerIdInstanciaGuacamole($computername);
         }
-        darPermiso($guaidconnection, $user->username);
+        darPermiso($guaidconnection, $guacuser);
 
         $guacamolecomputer                  = $DB->get_record('guacamole_computers', ['imageid' => $image->id, 'userid' => $user->id]);
         $guacamolecomputer->guaidconnection = $guaidconnection;
@@ -142,9 +143,9 @@ try {
         if ($guacamole->minutestoshutdown > $guacamolecomputer->minutestoshutdown) {
             $guacamolecomputer->minutestoshutdown = $guacamole->minutestoshutdown;
         }
-        crearUsuario($user->username);
+        crearUsuario($guacuser);
         if ($oldstate != 'started') {
-            darPermiso($guacamolecomputer->guaidconnection, $user->username);
+            darPermiso($guacamolecomputer->guaidconnection, $guacuser);
         }
         $DB->update_record('guacamole_computers', $guacamolecomputer);
     }
@@ -179,7 +180,7 @@ try {
             if (empty($guaidconnection)) {
                 $guaidconnection = obtenerIdInstanciaGuacamole($computername);
             }
-            darPermiso($guaidconnection, $user->username);
+            darPermiso($guaidconnection, $guacuser);
             $gcrecord = $DB->get_record('guacamole_computers', ['imageid' => $image->id, 'userid' => $user->id]);
             $gcrecord->guaidconnection = $guaidconnection;
             $DB->update_record('guacamole_computers', $gcrecord);
