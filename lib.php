@@ -56,7 +56,10 @@ function guacamole_supports($feature) {
             case FEATURE_BACKUP_MOODLE2:
                 return true;
             case FEATURE_MOD_PURPOSE:
-                return MOD_PURPOSE_INTERFACE;
+                // MOD_PURPOSE_INTERFACE was removed in Moodle 5.2 (MDL-87425).
+                return defined('MOD_PURPOSE_INTERFACE')
+                    ? MOD_PURPOSE_INTERFACE
+                    : MOD_PURPOSE_OTHER;
             default:
                 return null;
         }
